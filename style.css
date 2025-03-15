@@ -1,3 +1,9 @@
+/* 修复滚动问题 */
+html, body {
+    height: 100%;
+    width: 100%;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -6,36 +12,48 @@ body {
     color: #333;
     display: flex;
     min-height: 100vh;
+    overflow: hidden;
 }
 
 :root {
     --book-cover-ratio: 105/148;
-    --color-primary: #202020;
+    --color-primary: #000;
     --color-secondary: #c7c7c7;
+    --color-tertiary: #f39c12;
+    --color-background-1: rgb(32,44,52);
+    --color-background-2: rgb(53,70,82);
+    --color-background-3: rgb(98, 116, 128);
+    --color-background-4: rgb(62,82,94);
 }
 
 /* 侧边栏样式 */
 .sidebar {
     width: 210px;
-    background-color: #000000;
+    background-color: var(--color-background-2);
     color: #ecf0f1;
-    padding: 20px 0;
     flex-shrink: 0;
     height: 100vh;
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
     overflow-y: auto;
+    z-index: 1000;
+    /* 自定义滚动条样式 */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-tertiary) transparent;
 }
 
 .sidebar-header {
-    padding: 0 20px 20px;
-    margin-bottom: 20px;
+    padding: 20px;
+    height: 60px;
+    background-color: var(--color-background-1);
 }
 
 .sidebar-title {
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: bold;
-    color: #f39c12;
+    text-align: center;
+    color: var(--color-tertiary);
     margin: 0;
 }
 
@@ -46,12 +64,21 @@ body {
     padding: 0 20px;
 }
 
+.nav {
+    padding: 0;
+    background-color: var(--color-background-2);
+    display: flex;
+    flex-direction: column;
+}
+
 .nav-item {
     padding: 10px 20px;
     display: flex;
     align-items: center;
     cursor: pointer;
     transition: background-color 0.2s;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .nav-item:hover {
@@ -60,7 +87,7 @@ body {
 
 .nav-item.active {
     background-color: rgba(243, 156, 18, 0.2);
-    border-left: 3px solid #f39c12;
+    border-left: 3px solid var(--color-tertiary);
 }
 
 .nav-item i {
@@ -71,28 +98,60 @@ body {
 
 /* 主内容区域样式 */
 .main-content {
-    background-image: url(images/blur-light.png) !important;
-    background: url(images/blur-noise.png) !important;
-    -webkit-background-size: auto, cover !important;
     flex-grow: 1;
-    padding: 20px;
     background-color: #ecf0f1;
     position: relative;
+    margin-left: 210px;
+    width: calc(100% - 210px);
+    height: 100vh;
+    overflow: hidden;
+}
+
+.content {
+    padding: 20px;
+    background: url(images/blur-noise.png) !important;
+    margin-top: 60px;
+    height: calc(100vh - 60px);
+    overflow-y: auto;
+    box-sizing: border-box;
+    /* 自定义滚动条样式 */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-background-1) transparent;
+}
+
+/* Webkit浏览器的滚动条样式 */
+.content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.content::-webkit-scrollbar-thumb {
+    background-color: var(--color-background-1);
+    border-radius: 4px;
 }
 
 .header {
     display: flex;
+    position: fixed;
+    top: 0;
+    left: 210px;
+    right: 0;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #ddd;
+    padding: 10px 20px;
+    background-color: var(--color-background-3);
+    z-index: 999;
+    height: 60px;
 }
 
 .page-title {
-    font-size: 1.5rem;
+    font-size: 1rem;
     font-weight: bold;
-    color: #2c3e50;
+    text-align: center;
+    color: var(--color-secondary);
 }
 
 .search-bar {
@@ -117,9 +176,9 @@ body {
 
 /* 排序按钮样式 */
 .sort-buttons {
+    padding-bottom: 20px ;
     display: flex;
     gap: 10px;
-    margin-bottom: 20px;
     flex-wrap: wrap;
 }
 
@@ -127,7 +186,6 @@ body {
     background-color: var(--color-secondary);
     color: white;
     border: none;
-    border-radius: 4px;
     padding: 8px 15px;
     cursor: pointer;
     transition: background-color 0.2s;
@@ -135,7 +193,7 @@ body {
 }
 
 .sort-button:hover {
-    background-color: #7f8c8d;
+    background-color: #808080;
 }
 
 .sort-button.active {
@@ -210,16 +268,136 @@ body {
 @media (max-width: 768px) {
     body {
         flex-direction: column;
+        overflow: hidden;
+        height: 100vh;
     }
     
+    /* 侧边栏和导航的新布局 */
     .sidebar {
         width: 100%;
-        height: auto;
-        position: static;
+        height: 60px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1000;
+        overflow: visible;
+        display: flex;
+        flex-direction: row;
+    }
+    
+    .sidebar-header {
+        height: 60px;
+        padding: 10px 15px;
+        text-align: left;
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        width: auto;
+    }
+    
+    .nav {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        justify-content: flex-end;
+        padding: 0;
+        gap: 0;
+        height: 60px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        /* 自定义滚动条样式 */
+        scrollbar-width: none; /* Firefox */
+    }
+    
+    .nav::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Edge */
+    }
+    
+    .nav-item {
+        flex: 0 0 auto;
+        width: 50px; /* 使用576px的宽度 */
+        height: 60px;
+        padding: 0;
+        margin: 0;
+        border-radius: 0;
+        justify-content: center;
+        align-items: center;
+        background-color: transparent;
+        box-shadow: none;
+        transition: all 0.2s ease;
+        text-align: center;
+    }
+    
+    .nav-item i {
+        margin: 0;
+        font-size: 1.1rem; /* 使用576px的字体大小 */
+    }
+    
+    .nav-item span {
+        display: none; /* 隐藏文字 */
+    }
+    
+    .nav-item.active {
+        border-left: none;
+        border-bottom: 3px solid var(--color-tertiary);
+        background-color: rgba(243, 156, 18, 0.1);
+    }
+    
+    /* 主内容区域调整 */
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+        height: calc(100vh - 60px);
+        margin-top: 60px; /* 为固定的sidebar留出空间 */
+        overflow: hidden;
+    }
+    
+    .header {
+        left: 0;
+        top: 60px; /* 在sidebar下方 */
+        position: fixed;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .content {
+        margin-top: 60px; /* 为固定的header留出空间 */
+        height: calc(100vh - 120px); /* 减去sidebar和header的高度 */
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 50px; /* 使用576px的底部内边距 */
     }
     
     .books-grid {
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+    
+    .sort-buttons {
+        justify-content: center; /* 使用576px的居中对齐 */
+    }
+    
+    /* 确保弹窗内容可滚动 */
+    .modal-container {
+        max-height: 80vh;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* 弹窗样式调整 */
+    .modal-overlay {
+        align-items: flex-start;
+        padding-top: 10px;
+    }
+    
+    .modal-container {
+        max-height: 95vh;
+    }
+    
+    .modal-close {
+        top: 5px;
+        right: 5px;
     }
 }
 
@@ -251,7 +429,7 @@ body {
     display: none;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 1100; /* 确保在所有元素之上 */
 }
 
 /* 弹窗容器 */
@@ -264,6 +442,9 @@ body {
     overflow-y: auto;
     position: relative;
     animation: modalFadeIn 0.3s;
+    /* 自定义滚动条样式 */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-background-1) transparent;
 }
 
 @keyframes modalFadeIn {
@@ -280,8 +461,8 @@ body {
 /* 关闭按钮 */
 .modal-close {
     position: absolute;
-    top: 15px;
-    right: 15px;
+    top: 10px;
+    right: 10px;
     font-size: 1.5rem;
     color: #7f8c8d;
     cursor: pointer;
@@ -323,29 +504,57 @@ body {
     aspect-ratio: var(--book-cover-ratio);
     object-fit: contain;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* 新的书籍详情头部布局 */
+.book-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
     margin-bottom: 20px;
 }
 
-.download-button {
+.book-detail-title-area {
+    flex-grow: 1;
+    padding-right: 20px;
+}
+
+.book-action-buttons {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.action-button {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #27ae60;
-    color: white;
     border: none;
     border-radius: 4px;
-    padding: 10px 20px;
+    padding: 8px 15px;
     font-weight: bold;
     text-decoration: none;
-    width: 100%;
     transition: background-color 0.2s;
+    color: white;
+}
+
+.download-button {
+    background-color: #27ae60;
 }
 
 .download-button:hover {
     background-color: #2ecc71;
 }
 
-.download-button i {
+.read-button {
+    background-color: var(--color-tertiary);
+}
+
+.read-button:hover {
+    background-color: #f1c40f;
+}
+
+.action-button i {
     margin-right: 8px;
 }
 
@@ -433,11 +642,14 @@ body {
 @media (max-width: 992px) {
     .modal-container {
         width: 95%;
+        max-height: 85vh;
     }
     
     .book-detail-layout {
         flex-direction: column;
         padding: 20px;
+        max-height: none;
+        overflow-y: visible;
     }
     
     .book-detail-cover {
@@ -445,10 +657,35 @@ body {
         max-width: 300px;
         margin: 0 auto 30px;
     }
+    
+    .book-detail-header {
+        flex-direction: column;
+    }
+    
+    .book-detail-title-area {
+        margin-bottom: 15px;
+        padding-right: 0;
+    }
+    
+    .book-action-buttons {
+        width: 100%;
+    }
+    
+    .action-button {
+        flex: 1;
+    }
 }
 
 /* 禁止滚动 */
 body.modal-open {
+    overflow: hidden;
+}
+
+.main-content.modal-open {
+    overflow: hidden;
+}
+
+.content.modal-open {
     overflow: hidden;
 }
 
@@ -525,7 +762,7 @@ body.modal-open {
 }
 
 .breadcrumb-item {
-    color: var(--color-primary);
+    color: var(--color-secondary);
     cursor: pointer;
     transition: color 0.2s;
 }
@@ -540,10 +777,34 @@ body.modal-open {
 }
 
 .breadcrumb-current {
-    color: #2c3e50;
+    color: var(--color-secondary);
     cursor: default;
 }
 
-.breadcrumb-current:hover {
-    text-decoration: none;
+/* 侧边栏滚动条样式 */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background-color: var(--color-tertiary);
+    border-radius: 3px;
+}
+
+/* 弹窗滚动条样式 */
+.modal-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.modal-container::-webkit-scrollbar-thumb {
+    background-color: var(--color-tertiary);
+    border-radius: 4px;
 }

@@ -17,6 +17,8 @@ if (config.enableCors) {
 app.use('/static', express.static(path.join(__dirname, 'static')));
 app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/style.css', express.static(path.join(__dirname, 'style.css')));
+app.use('/bibi', express.static(path.join(__dirname, 'bibi')));
+app.use('/CalibreLib', express.static(path.join(__dirname, 'CalibreLib')));
 
 // 连接到Calibre的metadata.db
 let dbPath = config.calibreDbPath;
@@ -345,24 +347,38 @@ app.get('/api/books/:id', (req, res) => {
         cover_url = `/api/books/${book.id}/cover`;
       }
       
-      // 构建完整的书籍信息
-      const bookInfo = {
-        id: book.id,
-        title: book.title,
-        author: book.author,
-        authors: authors.map(a => a.author_name),
-        publisher: publisher ? publisher.publisher_name : null,
-        pubdate: book.pubdate,
-        timestamp: book.timestamp,
-        path: book.path,
-        series_index: book.series_index,
-        comment: book.comment,
-        cover_url: cover_url,
-        tags: tags.map(tag => tag.name),
-        epub_url: `/api/books/${book.id}/epub`
-      };
+      // 获取书籍目录中的所有文件
+      const bookDir = path.join(calibreLibraryPath, book.path);
       
-      res.json(bookInfo);
+      fs.readdir(bookDir, (err, files) => {
+        if (err) {
+          console.error('读取书籍目录时出错:', err.message);
+          return res.status(500).json({ error: '读取书籍目录失败' });
+        }
+        
+        // 查找epub文件
+        const epubFile = files.find(file => file.endsWith('.epub'));
+        
+        // 构建完整的书籍信息
+        const bookInfo = {
+          id: book.id,
+          title: book.title,
+          author: book.author,
+          authors: authors.map(a => a.author_name),
+          publisher: publisher ? publisher.publisher_name : null,
+          pubdate: book.pubdate,
+          timestamp: book.timestamp,
+          path: book.path,
+          series_index: book.series_index,
+          comment: book.comment,
+          cover_url: cover_url,
+          tags: tags.map(tag => tag.name),
+          epub_url: `/api/books/${book.id}/epub`,
+          epub_file: epubFile || null
+        };
+        
+        res.json(bookInfo);
+      });
     })
     .catch(err => {
       console.error('获取书籍相关信息时出错:', err.message);
@@ -442,6 +458,49 @@ app.get('/api/books/:id/epub', (req, res) => {
       
       // 发送文件
       res.sendFile(epubPath);
+    });
+  });
+});
+
+// 获取书籍EPUB文件路径（用于bibi阅读器）
+app.get('/api/books/:id/epub-path', (req, res) => {
+  const bookId = req.params.id;
+  
+  // 查询书籍路径
+  db.get('SELECT path FROM books WHERE id = ?', [bookId], (err, book) => {
+    if (err) {
+      console.error('查询书籍路径时出错:', err.message);
+      return res.status(500).json({ error: '查询书籍路径失败' });
+    }
+    
+    if (!book) {
+      return res.status(404).json({ error: '未找到书籍' });
+    }
+    
+    // 获取书籍目录中的所有文件
+    const bookDir = path.join(calibreLibraryPath, book.path);
+    
+    fs.readdir(bookDir, (err, files) => {
+      if (err) {
+        console.error('读取书籍目录时出错:', err.message);
+        return res.status(500).json({ error: '读取书籍目录失败' });
+      }
+      
+      // 查找epub文件
+      const epubFile = files.find(file => file.endsWith('.epub'));
+      
+      if (!epubFile) {
+        return res.status(404).json({ error: '未找到EPUB文件' });
+      }
+      
+      // 构建完整的相对路径
+      const fullPath = path.join(book.path, epubFile);
+      
+      res.json({ 
+        path: book.path,
+        epub_file: epubFile,
+        full_path: fullPath
+      });
     });
   });
 });

@@ -14,33 +14,35 @@
         <div class="sidebar-header">
             <a href="/"><h1 class="sidebar-title">RAINDROP213</h1></a>
         </div>
-        <div class="nav-item" data-page="books">
-            <i class="bi bi-book"></i>
-            <span>书籍</span>
-        </div>
-        <div class="nav-item" data-page="discover">
-            <i class="bi bi-search"></i>
-            <span>发现</span>
-        </div>
-        <div class="nav-item" data-page="categories">
-            <i class="bi bi-tags"></i>
-            <span>分类</span>
-        </div>
-        <div class="nav-item" data-page="series">
-            <i class="bi bi-collection"></i>
-            <span>丛书</span>
-        </div>
-        <div class="nav-item" data-page="authors">
-            <i class="bi bi-person"></i>
-            <span>作者</span>
-        </div>
-        <div class="nav-item" data-page="publishers">
-            <i class="bi bi-building"></i>
-            <span>出版</span>
-        </div>
-        <div class="nav-item" data-page="languages">
-            <i class="bi bi-translate"></i>
-            <span>语言</span>
+        <div class="nav">
+            <div class="nav-item" data-page="books">
+                <i class="bi bi-book"></i>
+                <span>书籍</span>
+            </div>
+            <div class="nav-item" data-page="discover">
+                <i class="bi bi-search"></i>
+                <span>发现</span>
+            </div>
+            <div class="nav-item" data-page="categories">
+                <i class="bi bi-tags"></i>
+                <span>分类</span>
+            </div>
+            <div class="nav-item" data-page="series">
+                <i class="bi bi-collection"></i>
+                <span>丛书</span>
+            </div>
+            <div class="nav-item" data-page="authors">
+                <i class="bi bi-person"></i>
+                <span>作者</span>
+            </div>
+            <div class="nav-item" data-page="publishers">
+                <i class="bi bi-building"></i>
+                <span>出版</span>
+            </div>
+            <div class="nav-item" data-page="languages">
+                <i class="bi bi-translate"></i>
+                <span>语言</span>
+            </div>
         </div>
     </div>
     
@@ -53,33 +55,36 @@
                 <input type="text" placeholder="Search" id="search-input">
             </div>
         </div>
-        
-        <!-- 排序按钮，只在书籍页面显示 -->
-        <div class="sort-buttons" id="sort-buttons">
-            <button class="sort-button" data-sort="date-desc">时间倒序</button>
-            <button class="sort-button" data-sort="date-asc">时间顺序</button>
-            <button class="sort-button" data-sort="title-asc">名称顺序</button>
-            <button class="sort-button" data-sort="title-desc">名称倒序</button>
-            <button class="sort-button" data-sort="author-asc">作者顺序</button>
-            <button class="sort-button" data-sort="author-desc">作者倒序</button>
-            <button class="sort-button" data-sort="pubdate-asc">出版顺序</button>
-            <button class="sort-button" data-sort="pubdate-desc">出版倒序</button>
-        </div>
 
-        <!-- 分类列表容器 -->
-        <div class="category-list" id="category-list" style="display: none;">
-            <!-- 分类项将通过JavaScript动态加载 -->
+        <div class="content">
+            <!-- 排序按钮，只在书籍页面显示 -->
+            <div class="sort-buttons" id="sort-buttons">
+                <button class="sort-button" data-sort="date-desc">时间倒序</button>
+                <button class="sort-button" data-sort="date-asc">时间顺序</button>
+                <button class="sort-button" data-sort="title-asc">名称顺序</button>
+                <button class="sort-button" data-sort="title-desc">名称倒序</button>
+                <button class="sort-button" data-sort="author-asc">作者顺序</button>
+                <button class="sort-button" data-sort="author-desc">作者倒序</button>
+                <button class="sort-button" data-sort="pubdate-asc">出版顺序</button>
+                <button class="sort-button" data-sort="pubdate-desc">出版倒序</button>
+            </div>
+
+            <!-- 分类列表容器 -->
+            <div class="category-list" id="category-list" style="display: none;">
+                <!-- 分类项将通过JavaScript动态加载 -->
+            </div>
+            
+            <!-- 书籍网格 -->
+            <div class="books-grid" id="books-container">
+                <!-- 书籍将通过JavaScript动态加载 -->
+            </div>
+            
+            <!-- 加载更多指示器 -->
+            <div class="loading" id="loading-indicator" style="display: none;">
+                <i class="bi bi-arrow-repeat"></i> 正在加载更多书籍...
+            </div>
         </div>
         
-        <!-- 书籍网格 -->
-        <div class="books-grid" id="books-container">
-            <!-- 书籍将通过JavaScript动态加载 -->
-        </div>
-        
-        <!-- 加载更多指示器 -->
-        <div class="loading" id="loading-indicator" style="display: none;">
-            <i class="bi bi-arrow-repeat"></i> 正在加载更多书籍...
-        </div>
     </div>
 
     <!-- 书籍详情弹窗 -->
@@ -108,17 +113,6 @@
         
         // 页面加载完成后执行
         document.addEventListener('DOMContentLoaded', function() {
-            // 设置默认活动导航项
-            document.querySelector(`.nav-item[data-page="${currentSection}"]`).classList.add('active');
-            document.querySelector(`.sort-button[data-sort="${currentSort}"]`).classList.add('active');
-            
-            // 检查URL是否包含书籍ID
-            const bookMatch = window.location.pathname.match(/\/book\/(\d+)/);
-            if (bookMatch) {
-                const bookId = parseInt(bookMatch[1]);
-                showBookDetail(bookId);
-            }
-            
             // 检查URL路径
             const urlPath = window.location.pathname;
             
@@ -127,10 +121,17 @@
             if (categoryMatch) {
                 const [, type, categoryName] = categoryMatch;
                 if (['publishers', 'authors', 'categories', 'series', 'languages'].includes(type)) {
+                    // 更新当前部分
+                    currentSection = type;
+                    
                     // 激活对应的导航项
                     const navItem = document.querySelector(`.nav-item[data-page="${type}"]`);
                     if (navItem) {
-                        navItem.click();
+                        // 添加活动类到当前项
+                        document.querySelectorAll('.nav-item').forEach(navItem => {
+                            navItem.classList.remove('active');
+                        });
+                        navItem.classList.add('active');
                         
                         // 加载分类数据并选中对应项
                         fetch(`/api/${type}`)
@@ -149,36 +150,81 @@
                     }
                 }
             } else {
-                // 检查URL是否包含页码信息
-                const pageMatch = urlPath.match(/\/page\/(\d+)/);
-                if (pageMatch) {
-                    const pageFromUrl = parseInt(pageMatch[1]);
-                    if (pageFromUrl > 1) {
-                        currentPage = 1;
-                        const targetPage = pageFromUrl;
-                        
-                        // 加载到指定页面
-                        const loadNextPage = function() {
-                            if (currentPage < targetPage && hasMoreBooks) {
-                                currentPage++;
-                                loadBooks(loadNextPage);
-                            }
-                        };
-                        
-                        loadBooks(loadNextPage);
-                    }
+                // 检查URL是否包含书籍ID
+                const bookMatch = urlPath.match(/\/book\/(\d+)/);
+                if (bookMatch) {
+                    const bookId = parseInt(bookMatch[1]);
+                    showBookDetail(bookId);
                 } else {
-                    // 检查URL是否包含部分信息
-                    const sectionMatch = urlPath.match(/^\/([a-z]+)/);
-                    if (sectionMatch) {
-                        const sectionFromUrl = sectionMatch[1];
-                        const navItem = document.querySelector(`.nav-item[data-page="${sectionFromUrl}"]`);
-                        if (navItem) {
-                            navItem.click();
+                    // 检查URL是否包含页码信息
+                    const pageMatch = urlPath.match(/\/page\/(\d+)/);
+                    if (pageMatch) {
+                        const pageFromUrl = parseInt(pageMatch[1]);
+                        if (pageFromUrl > 1) {
+                            currentPage = 1;
+                            const targetPage = pageFromUrl;
+                            
+                            // 加载到指定页面
+                            const loadNextPage = function() {
+                                if (currentPage < targetPage && hasMoreBooks) {
+                                    currentPage++;
+                                    loadBooks(loadNextPage);
+                                }
+                            };
+                            
+                            loadBooks(loadNextPage);
                         }
                     } else {
-                        // 加载初始书籍
-                        loadBooks();
+                        // 检查URL是否包含部分信息
+                        const sectionMatch = urlPath.match(/^\/([a-z]+)/);
+                        if (sectionMatch) {
+                            const sectionFromUrl = sectionMatch[1];
+                            if (['publishers', 'authors', 'categories', 'series', 'languages', 'books', 'discover'].includes(sectionFromUrl)) {
+                                // 更新当前部分
+                                currentSection = sectionFromUrl;
+                                
+                                // 激活对应的导航项
+                                const navItem = document.querySelector(`.nav-item[data-page="${sectionFromUrl}"]`);
+                                if (navItem) {
+                                    // 添加活动类到当前项
+                                    document.querySelectorAll('.nav-item').forEach(navItem => {
+                                        navItem.classList.remove('active');
+                                    });
+                                    navItem.classList.add('active');
+                                    
+                                    // 更新页面标题
+                                    const typeNames = {
+                                        'publishers': '出版',
+                                        'authors': '作者',
+                                        'categories': '分类',
+                                        'series': '丛书',
+                                        'languages': '语言',
+                                        'books': '书籍',
+                                        'discover': '发现'
+                                    };
+                                    document.querySelector('.page-title').textContent = typeNames[sectionFromUrl] || navItem.querySelector('span').textContent;
+                                    
+                                    // 根据页面类型显示不同内容
+                                    if (['publishers', 'authors', 'categories', 'series', 'languages'].includes(sectionFromUrl)) {
+                                        loadCategories(sectionFromUrl);
+                                    } else {
+                                        document.getElementById('category-list').style.display = 'none';
+                                        document.getElementById('books-container').style.display = 'grid';
+                                        document.getElementById('sort-buttons').style.display = sectionFromUrl === 'books' ? 'flex' : 'none';
+                                        document.getElementById('books-container').innerHTML = '';
+                                        loadBooks();
+                                    }
+                                }
+                            }
+                        } else {
+                            // 默认显示书籍页面
+                            // 设置默认活动导航项
+                            document.querySelector(`.nav-item[data-page="${currentSection}"]`).classList.add('active');
+                            document.querySelector(`.sort-button[data-sort="${currentSort}"]`).classList.add('active');
+                            
+                            // 加载初始书籍
+                            loadBooks();
+                        }
                     }
                 }
             }
@@ -264,14 +310,15 @@
             }, 500));
             
             // 滚动事件监听，实现无限滚动
-            window.addEventListener('scroll', function() {
+            const contentElement = document.querySelector('.content');
+            contentElement.addEventListener('scroll', function() {
                 if (isLoading || !hasMoreBooks) return;
                 
-                const scrollHeight = document.documentElement.scrollHeight;
-                const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-                const clientHeight = document.documentElement.clientHeight;
+                const scrollHeight = this.scrollHeight;
+                const scrollTop = this.scrollTop;
+                const clientHeight = this.clientHeight;
                 
-                // 当滚动到页面底部附近时加载更多
+                // 当滚动到内容底部附近时加载更多
                 if (scrollTop + clientHeight >= scrollHeight - 200) {
                     currentPage++;
                     loadBooks();
@@ -381,6 +428,8 @@
             const modal = document.getElementById('book-detail-modal');
             modal.style.display = 'flex';
             document.body.classList.add('modal-open');
+            document.querySelector('.main-content').classList.add('modal-open');
+            document.querySelector('.content').classList.add('modal-open');
             
             // 加载书籍详情
             fetch(`/api/books/${bookId}`)
@@ -406,14 +455,22 @@
                         <div class="book-detail-layout">
                             <div class="book-detail-cover">
                                 <img src="${book.cover_url || '/images/default-cover.svg'}" alt="${book.title}" class="detail-cover-img">
-                                <a href="${book.epub_url}" class="download-button">
-                                    <i class="bi bi-download"></i> 下载EPUB
-                                </a>
-                                <a href="阿萨德${book.epub_url}" class="download-button"> 阅读</a>
                             </div>
                             <div class="book-detail-info">
-                                <h1 class="detail-title">${book.title}</h1>
-                                <div class="detail-author">${book.authors ? book.authors.join(', ') : book.author}</div>
+                                <div class="book-detail-header">
+                                    <div class="book-detail-title-area">
+                                        <h1 class="detail-title">${book.title}</h1>
+                                        <div class="detail-author">${book.authors ? book.authors.join(', ') : book.author}</div>
+                                    </div>
+                                    <div class="book-action-buttons">
+                                        <a href="${book.epub_url}" class="action-button download-button">
+                                            <i class="bi bi-download"></i> 下载
+                                        </a>
+                                        <a href="/bibi/?book=${encodeURIComponent(book.path + '/' + book.epub_file)}" class="action-button read-button">
+                                            <i class="bi bi-book"></i> 阅读
+                                        </a>
+                                    </div>
+                                </div>
                                 <div class="detail-meta">
                                     <div class="meta-item">
                                         <span class="meta-label">出版日期:</span>
@@ -457,6 +514,8 @@
             const modal = document.getElementById('book-detail-modal');
             modal.style.display = 'none';
             document.body.classList.remove('modal-open');
+            document.querySelector('.main-content').classList.remove('modal-open');
+            document.querySelector('.content').classList.remove('modal-open');
         }
         
         // 点击弹窗背景关闭弹窗

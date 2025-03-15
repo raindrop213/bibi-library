@@ -9,7 +9,7 @@ module.exports = {
   // 例如：'C:/Users/用户名/AppData/Roaming/calibre/metadata.db'（Windows）
   // 或 '/home/用户名/calibre/metadata.db'（Linux/Mac）
   // calibreDbPath: 'F:/OneDrive/CalibreLib/metadata.db',
-  calibreDbPath: './Calibre/metadata.db',
+  calibreDbPath: './CalibreLib/metadata.db',
   
   // 是否启用CORS
   enableCors: true
