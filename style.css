@@ -1001,3 +1001,11 @@ body {
     text-align: center;
     color: var(--color-text-2);
 }
+
+.update-date {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    font-size: 0.6rem;
+    color: #818181;
+}
