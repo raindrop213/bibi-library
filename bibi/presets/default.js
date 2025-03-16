@@ -5,7 +5,7 @@ Bibi.preset({
 //-- Bookshelf
 //----------------------------------------------------------------------------------------------------------------------------------------------
 
-"bookshelf" : "../../CalibreLib", // Relative path from this preset file to the bookshelf directory. "/" at the end is ignored. (To use a path begins with "http(s)://", read <01> at the bottom of this preset file.)
+"bookshelf" : "../../CalibreLib2", // Relative path from this preset file to the bookshelf directory. "/" at the end is ignored. (To use a path begins with "http(s)://", read <01> at the bottom of this preset file.)
 
 //==============================================================================================================================================
 //-- Behavior

@@ -2,13 +2,51 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const cors = require('cors');
-const config = require('./config');
 const fs = require('fs');
 const sharp = require('sharp');
 const schedule = require('node-schedule');
-
 const app = express();
-const PORT = config.port || 3000;
+
+const config = require('./config');
+const PORT = config.port || 4545;
+
+// 更新bibi配置函数
+function updateBibiConfig() {
+  const bibiConfigPath = path.join(__dirname, 'bibi', 'presets', 'default.js');
+  
+  // 读取bibi配置文件
+  fs.readFile(bibiConfigPath, 'utf8', (err, data) => {
+    if (err) {
+      console.error(`无法读取bibi配置文件: ${err}`);
+      return;
+    }
+    
+    // 获取相对路径（从bibi/presets到书库目录）
+    let calibreLibPath = config.calibreLibPath;
+    if (calibreLibPath.startsWith('./')) {
+      calibreLibPath = calibreLibPath.substring(2); // 移除开头的'./'
+    }
+    const relativePath = `../../${calibreLibPath}`;
+    
+    // 使用正则表达式替换bookshelf配置
+    const updatedData = data.replace(
+      /(["']bookshelf["']\s*:\s*["'])([^"']+)(["'])/,
+      `$1${relativePath}$3`
+    );
+    
+    // 写入更新后的配置
+    fs.writeFile(bibiConfigPath, updatedData, 'utf8', (err) => {
+      if (err) {
+        console.error(`无法更新bibi配置文件: ${err}`);
+        return;
+      }
+      console.log(`已更新bibi阅读器配置:"bookshelf" : "${relativePath}" `);
+    });
+  });
+}
+
+// 执行bibi配置更新
+updateBibiConfig();
 
 // 确保缩略图目录存在
 const thumbDir = path.join(__dirname, '.thumb');
@@ -27,22 +65,25 @@ app.use('/static', express.static(path.join(__dirname, 'static')));
 app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/style.css', express.static(path.join(__dirname, 'style.css')));
 app.use('/bibi', express.static(path.join(__dirname, 'bibi')));
-app.use('/CalibreLib', express.static(path.join(__dirname, 'CalibreLib')));
 app.use('/.thumb', express.static(path.join(__dirname, '.thumb')));
 
-// 连接到Calibre的metadata.db
-let dbPath = config.calibreDbPath;
+// 使用config中的书库路径提供静态文件
+const calibreLibPathForStatic = config.calibreLibPath.replace(/^\.\//, '');
+app.use(`/${calibreLibPathForStatic}`, express.static(path.join(__dirname, config.calibreLibPath)));
+
+// 从config中获取Calibre库路径
+let calibreLibPath = config.calibreLibPath;
 
 // 如果是相对路径，转换为绝对路径
-if (!path.isAbsolute(dbPath)) {
-  dbPath = path.join(__dirname, dbPath);
+if (!path.isAbsolute(calibreLibPath)) {
+  calibreLibPath = path.join(__dirname, calibreLibPath);
 }
 
-// 获取Calibre库的根目录路径（metadata.db所在的目录）
-const calibreLibraryPath = path.dirname(dbPath);
+// 构建数据库路径（Calibre的metadata.db总是在库根目录下）
+const dbPath = path.join(calibreLibPath, 'metadata.db');
 
+console.log(`Calibre库路径: ${calibreLibPath}`);
 console.log(`尝试连接到数据库: ${dbPath}`);
-console.log(`Calibre库根目录: ${calibreLibraryPath}`);
 
 // 检查数据库文件是否存在
 let dbExists = false;
@@ -54,7 +95,7 @@ try {
 
 if (!dbExists) {
   console.error(`数据库文件不存在: ${dbPath}`);
-  console.error('请在config.js中设置正确的calibreDbPath');
+  console.error('请在config.js中设置正确的calibreLibPath');
 }
 
 // 全局变量存储数据库连接状态
@@ -189,7 +230,6 @@ app.get('/api/books', (req, res) => {
     SELECT DISTINCT
       books.id, 
       books.title, 
-      books.author_sort as author, 
       books.pubdate, 
       books.timestamp, 
       books.path,
@@ -221,31 +261,63 @@ app.get('/api/books', (req, res) => {
       }
       
       // 处理结果
-      const books = rows.map(book => {
-        // 构建封面URL
-        let cover_url = null;
-        if (book.has_cover) {
-          cover_url = `/api/books/${book.id}/cover`;
-        }
-        
-        return {
-          id: book.id,
-          title: book.title,
-          author: book.author,
-          pubdate: book.pubdate,
-          timestamp: book.timestamp,
-          path: book.path,
-          cover_url: cover_url
-        };
-      });
+      const processedBooks = [];
+      let completedBooks = 0;
       
-      res.json({
-        books,
-        page,
-        limit,
-        total,
-        totalPages,
-        hasMore: page < totalPages
+      if (rows.length === 0) {
+        // 如果没有书籍，直接返回空数组
+        return res.json({
+          books: [],
+          page,
+          limit,
+          total,
+          totalPages,
+          hasMore: page < totalPages
+        });
+      }
+      
+      // 为每本书获取真实作者名
+      rows.forEach(book => {
+        // 获取作者信息
+        const authorQuery = `
+          SELECT authors.name as author_name
+          FROM books_authors_link
+          JOIN authors ON books_authors_link.author = authors.id
+          WHERE books_authors_link.book = ?
+        `;
+        
+        db.all(authorQuery, [book.id], (err, authors) => {
+          // 构建封面URL
+          let cover_url = null;
+          if (book.has_cover) {
+            cover_url = `/api/books/${book.id}/cover`;
+          }
+          
+          const processedBook = {
+            id: book.id,
+            title: book.title,
+            author: err || !authors.length ? null : authors.map(a => a.author_name),
+            pubdate: book.pubdate,
+            timestamp: book.timestamp,
+            path: book.path,
+            cover_url: cover_url
+          };
+          
+          processedBooks.push(processedBook);
+          completedBooks++;
+          
+          // 当所有书籍都处理完毕时，返回结果
+          if (completedBooks === rows.length) {
+            res.json({
+              books: processedBooks,
+              page,
+              limit,
+              total,
+              totalPages,
+              hasMore: page < totalPages
+            });
+          }
+        });
       });
     });
   });
@@ -260,7 +332,6 @@ app.get('/api/books/:id', (req, res) => {
     SELECT 
       books.id, 
       books.title, 
-      books.author_sort as author, 
       books.pubdate, 
       books.timestamp, 
       books.path,
@@ -361,7 +432,7 @@ app.get('/api/books/:id', (req, res) => {
       }
       
       // 获取书籍目录中的所有文件
-      const bookDir = path.join(calibreLibraryPath, book.path);
+      const bookDir = path.join(calibreLibPath, book.path);
       
       fs.readdir(bookDir, (err, files) => {
         if (err) {
@@ -376,7 +447,6 @@ app.get('/api/books/:id', (req, res) => {
         const bookInfo = {
           id: book.id,
           title: book.title,
-          author: book.author,
           authors: authors.map(a => a.author_name),
           publisher: publisher ? publisher.publisher_name : null,
           pubdate: book.pubdate,
@@ -417,7 +487,7 @@ app.get('/api/books/:id/cover', (req, res) => {
     }
     
     // 构建封面文件路径
-    const coverPath = path.join(calibreLibraryPath, book.path, 'cover.jpg');
+    const coverPath = path.join(calibreLibPath, book.path, 'cover.jpg');
     
     // 检查文件是否存在
     fs.access(coverPath, fs.constants.F_OK, (err) => {
@@ -467,7 +537,7 @@ app.get('/api/books/:id/epub', (req, res) => {
   const bookId = req.params.id;
   
   // 查询书籍路径和标题
-  db.get('SELECT books.path, books.title, books.author_sort as author FROM books WHERE books.id = ?', [bookId], (err, book) => {
+  db.get('SELECT books.path, books.title FROM books WHERE books.id = ?', [bookId], (err, book) => {
     if (err) {
       console.error('查询书籍路径时出错:', err.message);
       return res.status(500).json({ error: '查询书籍路径失败' });
@@ -488,8 +558,8 @@ app.get('/api/books/:id/epub', (req, res) => {
     db.all(authorQuery, [bookId], (err, authors) => {
       if (err) {
         console.error('获取作者信息时出错:', err.message);
-        // 继续使用book.author作为备选
-        processBookDownload(book, null);
+        // 继续处理，但不使用作者信息
+        processBookDownload(book, []);
       } else {
         processBookDownload(book, authors);
       }
@@ -497,7 +567,7 @@ app.get('/api/books/:id/epub', (req, res) => {
     
     function processBookDownload(book, authors) {
       // 获取书籍目录中的所有文件
-      const bookDir = path.join(calibreLibraryPath, book.path);
+      const bookDir = path.join(calibreLibPath, book.path);
       
       fs.readdir(bookDir, (err, files) => {
         if (err) {
@@ -520,8 +590,6 @@ app.get('/api/books/:id/epub', (req, res) => {
           // 使用×连接多个作者
           const authorNames = authors.map(a => a.author_name);
           customFilename = `[${authorNames.join('×')}] ${book.title}.epub`;
-        } else if (book.author) {
-          customFilename = `[${book.author}] ${book.title}.epub`;
         } else {
           customFilename = `${book.title}.epub`;
         }
@@ -558,7 +626,7 @@ app.get('/api/books/:id/epub-path', (req, res) => {
     }
     
     // 获取书籍目录中的所有文件
-    const bookDir = path.join(calibreLibraryPath, book.path);
+    const bookDir = path.join(calibreLibPath, book.path);
     
     fs.readdir(bookDir, (err, files) => {
       if (err) {
@@ -796,136 +864,26 @@ function clearThumbnails() {
   }
 }
 
-// 设置定时任务 - 每天凌晨3点执行
-const dailyJob = schedule.scheduleJob('0 3 * * *', function() {
+// 从配置中获取缩略图清理设置
+const thumbnailCleanInterval = config.thumbnails?.cleanInterval || 7; // 默认7天
+const thumbnailCleanTime = config.thumbnails?.cleanTime || '03:00'; // 默认凌晨3点
+const [cleanHour, cleanMinute] = thumbnailCleanTime.split(':').map(Number);
+
+// 设置定时任务 - 根据配置的时间和间隔执行
+const cleanScheduleRule = new schedule.RecurrenceRule();
+cleanScheduleRule.hour = cleanHour;
+cleanScheduleRule.minute = cleanMinute;
+cleanScheduleRule.dayOfWeek = new schedule.Range(0, 6, thumbnailCleanInterval);
+
+const thumbnailCleanJob = schedule.scheduleJob(cleanScheduleRule, function() {
   const deletedCount = clearThumbnails();
   console.log(`定时任务完成，清理了 ${deletedCount} 个缩略图文件`);
 });
 
-console.log('已设置每天凌晨3点自动清理缩略图的定时任务');
-
-// 清理缩略图缓存
-app.get('/api/admin/clear-thumbnails', (req, res) => {
-  // 简单的安全检查 - 仅允许本地请求
-  const clientIp = req.ip || req.connection.remoteAddress;
-  if (clientIp !== '::1' && clientIp !== '127.0.0.1' && clientIp !== '::ffff:127.0.0.1') {
-    return res.status(403).json({ error: '仅允许本地请求' });
-  }
-
-  try {
-    // 读取缩略图目录中的所有文件
-    const files = fs.readdirSync(thumbDir);
-    let deletedCount = 0;
-
-    // 删除每个文件
-    files.forEach(file => {
-      if (file.endsWith('.jpg')) {
-        fs.unlinkSync(path.join(thumbDir, file));
-        deletedCount++;
-      }
-    });
-
-    res.json({ 
-      success: true, 
-      message: `成功清理 ${deletedCount} 个缩略图文件`,
-      thumbDir: thumbDir
-    });
-  } catch (err) {
-    console.error('清理缩略图时出错:', err);
-    res.status(500).json({ error: '清理缩略图失败', details: err.message });
-  }
-});
-
-// 管理页面
-app.get('/admin', (req, res) => {
-  // 简单的安全检查 - 仅允许本地请求
-  const clientIp = req.ip || req.connection.remoteAddress;
-  if (clientIp !== '::1' && clientIp !== '127.0.0.1' && clientIp !== '::ffff:127.0.0.1') {
-    return res.status(403).send('仅允许本地访问管理页面');
-  }
-
-  // 获取缩略图统计信息
-  let thumbnailStats = { count: 0, size: 0 };
-  try {
-    const files = fs.readdirSync(thumbDir);
-    thumbnailStats.count = files.filter(file => file.endsWith('.jpg')).length;
-    
-    // 计算总大小
-    files.forEach(file => {
-      if (file.endsWith('.jpg')) {
-        const stats = fs.statSync(path.join(thumbDir, file));
-        thumbnailStats.size += stats.size;
-      }
-    });
-    
-    // 转换为MB
-    thumbnailStats.sizeMB = (thumbnailStats.size / (1024 * 1024)).toFixed(2);
-  } catch (err) {
-    console.error('获取缩略图统计信息时出错:', err);
-  }
-
-  // 发送简单的HTML页面
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="zh-CN">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>RAINDROP213 - 管理</title>
-      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-      <style>
-        body { padding: 20px; }
-        .card { margin-bottom: 20px; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <h1 class="mb-4">RAINDROP213 管理</h1>
-        
-        <div class="card">
-          <div class="card-header">缩略图管理</div>
-          <div class="card-body">
-            <p>缩略图目录: ${thumbDir}</p>
-            <p>缩略图数量: ${thumbnailStats.count}</p>
-            <p>缩略图总大小: ${thumbnailStats.sizeMB} MB</p>
-            
-            <button id="clearThumbnails" class="btn btn-warning">清理所有缩略图</button>
-            <div id="result" class="mt-3"></div>
-          </div>
-        </div>
-        
-        <a href="/" class="btn btn-primary">返回首页</a>
-      </div>
-      
-      <script>
-        document.getElementById('clearThumbnails').addEventListener('click', function() {
-          if (confirm('确定要清理所有缩略图吗？这将删除所有缩略图文件，它们会在需要时重新生成。')) {
-            fetch('/api/admin/clear-thumbnails')
-              .then(response => response.json())
-              .then(data => {
-                document.getElementById('result').innerHTML = 
-                  '<div class="alert alert-success">' + data.message + '</div>';
-                // 2秒后刷新页面
-                setTimeout(() => location.reload(), 2000);
-              })
-              .catch(error => {
-                document.getElementById('result').innerHTML = 
-                  '<div class="alert alert-danger">清理失败: ' + error.message + '</div>';
-              });
-          }
-        });
-      </script>
-    </body>
-    </html>
-  `);
-});
+console.log(`已设置每${thumbnailCleanInterval}天${cleanHour}:${cleanMinute.toString().padStart(2, '0')}自动清理缩略图的定时任务`);
 
 // 处理SPA路由
 app.get('*', (req, res) => {
-  // 如果是根路径，重定向到/books
-  // if (req.path === '/') {
-  //   return res.redirect('/books');
-  // }
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
@@ -936,8 +894,8 @@ app.listen(PORT, () => {
 
 // 当应用关闭时关闭数据库连接和取消定时任务
 process.on('SIGINT', () => {
-  if (dailyJob) {
-    dailyJob.cancel();
+  if (thumbnailCleanJob) {
+    thumbnailCleanJob.cancel();
     console.log('已取消定时任务');
   }
   

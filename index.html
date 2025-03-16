@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RAINDROP213</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="/style.css">
+    <script src="js/analytics.js"></script>
 </head>
 <body>
     <!-- 侧边栏 -->
     <div class="sidebar">
         <div class="sidebar-header" onclick="window.location.href='/'">
-            <div class="sidebar-title">RAINDROP213</div>
+            <div class="sidebar-title"></div>
         </div>
         <div class="nav">
             <div class="nav-item" data-page="books">
@@ -160,6 +161,22 @@
         
         // 收藏书籍数组
         let favoriteBooks = JSON.parse(localStorage.getItem('favoriteBooks')) || [];
+        
+        // 检查是否需要加载更多内容
+        function checkNeedMoreContent() {
+            // 如果当前不是在加载中，且还有更多书籍可加载
+            if (!isLoading && hasMoreBooks && (currentSection === 'books' || currentCategory)) {
+                const contentElement = document.querySelector('.content');
+                
+                // 如果内容没有出现滚动条，说明内容不足以填满视图区域
+                if (contentElement.scrollHeight <= contentElement.clientHeight) {
+                    currentPage++;
+                    loadBooks();
+                    return true;
+                }
+            }
+            return false;
+        }
         
         // 页面加载完成后执行
         document.addEventListener('DOMContentLoaded', function() {
@@ -354,10 +371,13 @@
                     }
                 }
             });
+            
+            // 监听窗口大小变化事件，当窗口大小变化时检查内容高度
+            window.addEventListener('resize', debounce(checkNeedMoreContent, 200));
         });
         
         // 加载书籍函数
-        function loadBooks(callback) {
+        function loadBooks() {
             if (isLoading || !hasMoreBooks) return;
             
             isLoading = true;
@@ -408,10 +428,10 @@
                         // 检查是否还有更多书籍
                         hasMoreBooks = data.hasMore;
                         
-                        // 如果有回调函数，执行它
-                        if (callback && typeof callback === 'function') {
-                            setTimeout(callback, 100);
-                        }
+                        // 检查内容高度是否小于视图区域高度，如果是且还有更多书籍，则自动加载更多
+                        setTimeout(() => {
+                            checkNeedMoreContent();
+                        }, 200); // 给渲染一些时间
                     } else {
                         hasMoreBooks = false;
                         if (currentPage === 1) {
@@ -463,7 +483,7 @@
             if (!author) return '';
             // 如果作者是数组，处理多个作者
             if (Array.isArray(author)) {
-                return author.map(a => `<a href="/authors/${encodeURIComponent(a.toLowerCase())}">${a}</a>`).join(', ');
+                return author.map(a => `<a href="/authors/${encodeURIComponent(a.toLowerCase())}">${a}</a>`).join('；');
             }
             // 单个作者
             return `<a href="/authors/${encodeURIComponent(author.toLowerCase())}">${author}</a>`;
@@ -523,8 +543,6 @@
                     let customFilename = '';
                     if (book.authors && book.authors.length > 0) {
                         customFilename = `[${book.authors.join('×')}] ${book.title}.epub`;
-                    } else if (book.author) {
-                        customFilename = `[${book.author}] ${book.title}.epub`;
                     } else {
                         customFilename = `${book.title}.epub`;
                     }
@@ -533,7 +551,7 @@
                         .replace(/[\/\\:*?"<>|]/g, '_') // 替换Windows和Unix系统中的非法字符
                         .replace(/\s+/g, ' '); // 将多个空格替换为单个空格
                     
-                    downloadButton.title = `下载 (${customFilename})`;
+                    downloadButton.title = `下载 ${customFilename})`;
                     
                     readButton.onclick = function() {
                         window.location.href = `/bibi/?book=${encodeURIComponent(book.path + '/' + book.epub_file)}`;
@@ -553,7 +571,7 @@
                         if (!authors) return '';
                         // 如果作者是数组，处理多个作者
                         if (Array.isArray(authors)) {
-                            return authors.map(a => `<a href="/authors/${encodeURIComponent(a.toLowerCase())}">${a}</a>`).join(', ');
+                            return authors.map(a => `<a href="/authors/${encodeURIComponent(a.toLowerCase())}">${a}</a>`).join('；');
                         }
                         // 单个作者
                         return `<a href="/authors/${encodeURIComponent(authors.toLowerCase())}">${authors}</a>`;
@@ -570,7 +588,7 @@
                             <div class="book-detail-info">
                                 <div class="book-detail-header">
                                     <h1 class="detail-title">${book.title}</h1>
-                                    <div class="detail-author">${formatDetailAuthorLinks(book.authors || book.author)}</div>
+                                    <div class="detail-author">${formatDetailAuthorLinks(book.authors)}</div>
                                 </div>
                                 <div class="detail-meta">
                                     <div class="meta-item">
@@ -829,7 +847,7 @@
                 const bookToSave = {
                     id: book.id,
                     title: book.title,
-                    author: book.author || book.authors,
+                    author: book.authors,
                     cover_url: book.cover_url,
                     date_added: new Date().toISOString()
                 };
