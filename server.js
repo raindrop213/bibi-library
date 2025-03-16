@@ -4,9 +4,17 @@ const path = require('path');
 const cors = require('cors');
 const config = require('./config');
 const fs = require('fs');
+const sharp = require('sharp');
 
 const app = express();
 const PORT = config.port || 3000;
+
+// 确保缩略图目录存在
+const thumbDir = path.join(__dirname, '.thumb');
+if (!fs.existsSync(thumbDir)) {
+  fs.mkdirSync(thumbDir, { recursive: true });
+  console.log(`创建缩略图目录: ${thumbDir}`);
+}
 
 // 启用CORS
 if (config.enableCors) {
@@ -19,6 +27,7 @@ app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/style.css', express.static(path.join(__dirname, 'style.css')));
 app.use('/bibi', express.static(path.join(__dirname, 'bibi')));
 app.use('/CalibreLib', express.static(path.join(__dirname, 'CalibreLib')));
+app.use('/.thumb', express.static(path.join(__dirname, '.thumb')));
 
 // 连接到Calibre的metadata.db
 let dbPath = config.calibreDbPath;
@@ -118,8 +127,11 @@ app.get('/api/books', (req, res) => {
     case 'pubdate-desc':
       orderBy = 'books.pubdate DESC';
       break;
+    case 'random':
+      orderBy = 'RANDOM()';
+      break;
     default:
-      orderBy = section === 'discover' ? 'RANDOM()' : 'books.timestamp DESC';
+      orderBy = 'books.timestamp DESC';
   }
   
   // 构建查询条件
@@ -390,6 +402,7 @@ app.get('/api/books/:id', (req, res) => {
 // 获取书籍封面
 app.get('/api/books/:id/cover', (req, res) => {
   const bookId = req.params.id;
+  const size = req.query.size || 'full'; // 可选参数：thumb（缩略图）或full（原图）
   
   // 查询书籍路径
   db.get('SELECT path, has_cover FROM books WHERE id = ?', [bookId], (err, book) => {
@@ -412,8 +425,38 @@ app.get('/api/books/:id/cover', (req, res) => {
         return res.status(404).json({ error: '封面文件不存在' });
       }
       
-      // 发送文件
-      res.sendFile(coverPath);
+      // 如果请求的是原图，直接发送
+      if (size === 'full') {
+        return res.sendFile(coverPath);
+      }
+      
+      // 缩略图处理
+      // 为每本书创建唯一的缩略图文件名
+      const thumbFilename = `${bookId}.jpg`;
+      const thumbPath = path.join(thumbDir, thumbFilename);
+      
+      // 检查缩略图是否已存在
+      fs.access(thumbPath, fs.constants.F_OK, (err) => {
+        if (!err) {
+          // 缩略图已存在，直接发送
+          return res.sendFile(thumbPath);
+        }
+        
+        // 缩略图不存在，生成缩略图
+        sharp(coverPath)
+          .resize(210, 296) // 按照书籍封面比例 105:148 的两倍大小
+          .jpeg({ quality: 80 }) // 设置JPEG质量为80%
+          .toFile(thumbPath)
+          .then(() => {
+            // 发送生成的缩略图
+            res.sendFile(thumbPath);
+          })
+          .catch(err => {
+            console.error('生成缩略图时出错:', err);
+            // 如果生成缩略图失败，回退到发送原图
+            res.sendFile(coverPath);
+          });
+      });
     });
   });
 });
@@ -423,7 +466,7 @@ app.get('/api/books/:id/epub', (req, res) => {
   const bookId = req.params.id;
   
   // 查询书籍路径和标题
-  db.get('SELECT path, title FROM books WHERE id = ?', [bookId], (err, book) => {
+  db.get('SELECT books.path, books.title, books.author_sort as author FROM books WHERE books.id = ?', [bookId], (err, book) => {
     if (err) {
       console.error('查询书籍路径时出错:', err.message);
       return res.status(500).json({ error: '查询书籍路径失败' });
@@ -433,32 +476,68 @@ app.get('/api/books/:id/epub', (req, res) => {
       return res.status(404).json({ error: '未找到书籍' });
     }
     
-    // 获取书籍目录中的所有文件
-    const bookDir = path.join(calibreLibraryPath, book.path);
+    // 获取作者信息
+    const authorQuery = `
+      SELECT authors.name as author_name
+      FROM books_authors_link
+      JOIN authors ON books_authors_link.author = authors.id
+      WHERE books_authors_link.book = ?
+    `;
     
-    fs.readdir(bookDir, (err, files) => {
+    db.all(authorQuery, [bookId], (err, authors) => {
       if (err) {
-        console.error('读取书籍目录时出错:', err.message);
-        return res.status(500).json({ error: '读取书籍目录失败' });
+        console.error('获取作者信息时出错:', err.message);
+        // 继续使用book.author作为备选
+        processBookDownload(book, null);
+      } else {
+        processBookDownload(book, authors);
       }
-      
-      // 查找epub文件
-      const epubFile = files.find(file => file.endsWith('.epub'));
-      
-      if (!epubFile) {
-        return res.status(404).json({ error: '未找到EPUB文件' });
-      }
-      
-      const epubPath = path.join(bookDir, epubFile);
-      
-      // 设置文件名
-      const filename = encodeURIComponent(epubFile);
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.setHeader('Content-Type', 'application/epub+zip');
-      
-      // 发送文件
-      res.sendFile(epubPath);
     });
+    
+    function processBookDownload(book, authors) {
+      // 获取书籍目录中的所有文件
+      const bookDir = path.join(calibreLibraryPath, book.path);
+      
+      fs.readdir(bookDir, (err, files) => {
+        if (err) {
+          console.error('读取书籍目录时出错:', err.message);
+          return res.status(500).json({ error: '读取书籍目录失败' });
+        }
+        
+        // 查找epub文件
+        const epubFile = files.find(file => file.endsWith('.epub'));
+        
+        if (!epubFile) {
+          return res.status(404).json({ error: '未找到EPUB文件' });
+        }
+        
+        const epubPath = path.join(bookDir, epubFile);
+        
+        // 创建自定义文件名 [作者] 标题.epub
+        let customFilename = '';
+        if (authors && authors.length > 0) {
+          // 使用×连接多个作者
+          const authorNames = authors.map(a => a.author_name);
+          customFilename = `[${authorNames.join('×')}] ${book.title}.epub`;
+        } else if (book.author) {
+          customFilename = `[${book.author}] ${book.title}.epub`;
+        } else {
+          customFilename = `${book.title}.epub`;
+        }
+        
+        // 替换文件名中的非法字符
+        customFilename = customFilename
+          .replace(/[\/\\:*?"<>|]/g, '_') // 替换Windows和Unix系统中的非法字符
+          .replace(/\s+/g, ' '); // 将多个空格替换为单个空格
+        
+        // 设置文件名
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(customFilename)}"`);
+        res.setHeader('Content-Type', 'application/epub+zip');
+        
+        // 发送文件
+        res.sendFile(epubPath);
+      });
+    }
   });
 });
 
@@ -646,12 +725,174 @@ app.get('/api/languages', (req, res) => {
       return res.status(500).json({ error: '获取语言列表失败' });
     }
     
-    res.json({ languages: rows });
+    // 语言代码到中文名称的映射
+    const languageMap = {
+      'eng': '英语',
+      'jpn': '日语',
+      'zho': '中文',
+      'chi': '中文',
+      'kor': '韩语',
+      'fra': '法语',
+      'deu': '德语',
+      'spa': '西班牙语',
+      'ita': '意大利语',
+      'rus': '俄语',
+      'por': '葡萄牙语',
+      'ara': '阿拉伯语',
+      'hin': '印地语',
+      'ben': '孟加拉语',
+      'vie': '越南语',
+      'tha': '泰语',
+      'ind': '印度尼西亚语',
+      'nld': '荷兰语',
+      'swe': '瑞典语',
+      'pol': '波兰语',
+      'tur': '土耳其语',
+      'ukr': '乌克兰语',
+      'heb': '希伯来语',
+      'dan': '丹麦语',
+      'fin': '芬兰语',
+      'nor': '挪威语',
+      'hun': '匈牙利语',
+      'ces': '捷克语',
+      'ron': '罗马尼亚语',
+      'ell': '希腊语'
+    };
+    
+    // 添加中文名称
+    const languagesWithNames = rows.map(lang => ({
+      id: lang.id,
+      lang_code: lang.lang_code,
+      name: languageMap[lang.lang_code] || lang.lang_code, // 如果没有映射，使用原始代码
+      book_count: lang.book_count
+    }));
+    
+    res.json({ languages: languagesWithNames });
   });
+});
+
+// 清理缩略图缓存
+app.get('/api/admin/clear-thumbnails', (req, res) => {
+  // 简单的安全检查 - 仅允许本地请求
+  const clientIp = req.ip || req.connection.remoteAddress;
+  if (clientIp !== '::1' && clientIp !== '127.0.0.1' && clientIp !== '::ffff:127.0.0.1') {
+    return res.status(403).json({ error: '仅允许本地请求' });
+  }
+
+  try {
+    // 读取缩略图目录中的所有文件
+    const files = fs.readdirSync(thumbDir);
+    let deletedCount = 0;
+
+    // 删除每个文件
+    files.forEach(file => {
+      if (file.endsWith('.jpg')) {
+        fs.unlinkSync(path.join(thumbDir, file));
+        deletedCount++;
+      }
+    });
+
+    res.json({ 
+      success: true, 
+      message: `成功清理 ${deletedCount} 个缩略图文件`,
+      thumbDir: thumbDir
+    });
+  } catch (err) {
+    console.error('清理缩略图时出错:', err);
+    res.status(500).json({ error: '清理缩略图失败', details: err.message });
+  }
+});
+
+// 管理页面
+app.get('/admin', (req, res) => {
+  // 简单的安全检查 - 仅允许本地请求
+  const clientIp = req.ip || req.connection.remoteAddress;
+  if (clientIp !== '::1' && clientIp !== '127.0.0.1' && clientIp !== '::ffff:127.0.0.1') {
+    return res.status(403).send('仅允许本地访问管理页面');
+  }
+
+  // 获取缩略图统计信息
+  let thumbnailStats = { count: 0, size: 0 };
+  try {
+    const files = fs.readdirSync(thumbDir);
+    thumbnailStats.count = files.filter(file => file.endsWith('.jpg')).length;
+    
+    // 计算总大小
+    files.forEach(file => {
+      if (file.endsWith('.jpg')) {
+        const stats = fs.statSync(path.join(thumbDir, file));
+        thumbnailStats.size += stats.size;
+      }
+    });
+    
+    // 转换为MB
+    thumbnailStats.sizeMB = (thumbnailStats.size / (1024 * 1024)).toFixed(2);
+  } catch (err) {
+    console.error('获取缩略图统计信息时出错:', err);
+  }
+
+  // 发送简单的HTML页面
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="zh-CN">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>RAINDROP213 - 管理</title>
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+      <style>
+        body { padding: 20px; }
+        .card { margin-bottom: 20px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1 class="mb-4">RAINDROP213 管理</h1>
+        
+        <div class="card">
+          <div class="card-header">缩略图管理</div>
+          <div class="card-body">
+            <p>缩略图目录: ${thumbDir}</p>
+            <p>缩略图数量: ${thumbnailStats.count}</p>
+            <p>缩略图总大小: ${thumbnailStats.sizeMB} MB</p>
+            
+            <button id="clearThumbnails" class="btn btn-warning">清理所有缩略图</button>
+            <div id="result" class="mt-3"></div>
+          </div>
+        </div>
+        
+        <a href="/" class="btn btn-primary">返回首页</a>
+      </div>
+      
+      <script>
+        document.getElementById('clearThumbnails').addEventListener('click', function() {
+          if (confirm('确定要清理所有缩略图吗？这将删除所有缩略图文件，它们会在需要时重新生成。')) {
+            fetch('/api/admin/clear-thumbnails')
+              .then(response => response.json())
+              .then(data => {
+                document.getElementById('result').innerHTML = 
+                  '<div class="alert alert-success">' + data.message + '</div>';
+                // 2秒后刷新页面
+                setTimeout(() => location.reload(), 2000);
+              })
+              .catch(error => {
+                document.getElementById('result').innerHTML = 
+                  '<div class="alert alert-danger">清理失败: ' + error.message + '</div>';
+              });
+          }
+        });
+      </script>
+    </body>
+    </html>
+  `);
 });
 
 // 处理SPA路由
 app.get('*', (req, res) => {
+  // 如果是根路径，重定向到/books
+  // if (req.path === '/') {
+  //   return res.redirect('/books');
+  // }
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 

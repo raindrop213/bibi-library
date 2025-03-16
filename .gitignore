@@ -1,5 +1,6 @@
-/Calibre/*
-/CalibreLib/*
+Calibre/*
+CalibreLib/*
+.thumb/*
 
 # Logs
 logs

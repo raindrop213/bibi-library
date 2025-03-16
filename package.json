@@ -1,14 +1,8 @@
 {
-  "name": "book-info",
-  "version": "1.0.0",
-  "description": "显示Calibre书籍元数据的网页应用",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
   "dependencies": {
-    "express": "^4.18.2",
-    "sqlite3": "^5.1.6",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "sharp": "^0.33.5",
+    "sqlite3": "^5.1.7"
   }
 }
