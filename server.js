@@ -5,6 +5,7 @@ const cors = require('cors');
 const config = require('./config');
 const fs = require('fs');
 const sharp = require('sharp');
+const schedule = require('node-schedule');
 
 const app = express();
 const PORT = config.port || 3000;
@@ -771,6 +772,38 @@ app.get('/api/languages', (req, res) => {
   });
 });
 
+// 清理缩略图函数
+function clearThumbnails() {
+  console.log('开始执行定时清理缩略图任务...');
+  try {
+    // 读取缩略图目录中的所有文件
+    const files = fs.readdirSync(thumbDir);
+    let deletedCount = 0;
+
+    // 删除每个文件
+    files.forEach(file => {
+      if (file.endsWith('.jpg')) {
+        fs.unlinkSync(path.join(thumbDir, file));
+        deletedCount++;
+      }
+    });
+
+    console.log(`定时任务：成功清理 ${deletedCount} 个缩略图文件`);
+    return deletedCount;
+  } catch (err) {
+    console.error('定时清理缩略图时出错:', err);
+    return 0;
+  }
+}
+
+// 设置定时任务 - 每天凌晨3点执行
+const dailyJob = schedule.scheduleJob('0 3 * * *', function() {
+  const deletedCount = clearThumbnails();
+  console.log(`定时任务完成，清理了 ${deletedCount} 个缩略图文件`);
+});
+
+console.log('已设置每天凌晨3点自动清理缩略图的定时任务');
+
 // 清理缩略图缓存
 app.get('/api/admin/clear-thumbnails', (req, res) => {
   // 简单的安全检查 - 仅允许本地请求
@@ -901,8 +934,13 @@ app.listen(PORT, () => {
   console.log(`服务器运行在 http://localhost:${PORT}`);
 });
 
-// 当应用关闭时关闭数据库连接
+// 当应用关闭时关闭数据库连接和取消定时任务
 process.on('SIGINT', () => {
+  if (dailyJob) {
+    dailyJob.cancel();
+    console.log('已取消定时任务');
+  }
+  
   db.close(() => {
     console.log('数据库连接已关闭');
     process.exit(0);
