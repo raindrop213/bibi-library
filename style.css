@@ -546,7 +546,7 @@ body {
     display: none;
     justify-content: center;
     align-items: center;
-    z-index: 1100; /* 确保在所有元素之上 */
+    z-index: 99000; /* 确保在所有元素之上 */
 }
 
 /* 弹窗容器 */
@@ -931,4 +931,73 @@ body {
     padding: 8px 15px;
     margin-top: 20px;
     cursor: pointer;
+}
+
+/* 添加关于按钮样式 */
+.about-button {
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    background-color: var(--color-background-3);
+    color: var(--color-text-2);
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.about-button:hover {
+    background-color: var(--color-background-1);
+    color: var(--color-tertiary);
+}
+
+/* 关于弹窗样式 */
+#about-modal .modal-container {
+    max-width: 650px;
+}
+
+.about-modal-container {
+    padding: 30px;
+    overflow-y: auto;
+}
+
+.about-content {
+    color: var(--color-text-1);
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.about-content h2 {
+    color: var(--color-tertiary);
+    margin-bottom: 20px;
+    font-size: 1.2rem;
+}
+
+.about-content p {
+    margin-bottom: 15px;
+}
+
+.about-content a {
+    color: var(--color-tertiary);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.about-content a:hover {
+    text-decoration: underline;
+}
+
+.no-results {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: var(--color-text-2);
 }

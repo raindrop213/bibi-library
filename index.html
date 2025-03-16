@@ -113,6 +113,10 @@
             </div>
         </div>
         
+        <!-- 关于按钮 -->
+        <button class="about-button" id="about-button" onclick="showAboutModal()">
+            <i class="bi bi-info-circle"></i>
+        </button>
     </div>
 
     <!-- 书籍详情弹窗 -->
@@ -140,6 +144,34 @@
             </div>
         </div>
     </div>
+    
+    <!-- 关于弹窗 -->
+    <div class="modal-overlay" id="about-modal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-title">FROM RAINDROP213</div>
+                <div class="modal-actions">
+                    <button class="modal-action-button close-button" onclick="closeAboutModal()" title="关闭">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="about-modal-container">
+                <div class="about-content">
+                    <h2>欢迎使用 RAINDROP213 书库项目</h2>
+                    <p>本项目唯一站点为 <a href="http://ebook.raindrop213.com">ebook.raindrop213.com</a> 此外的站点均为盗链。
+                        然后旧站点将继续保持推送，有需要的可以通过 <a href="http://calibre.raindrop213.com" target="_blank">calibre.raindrop213.com</a> 访问。
+                        最后本站仅作为学习使用，不提供任何商业用途，感谢使用！</p>
+                    <ul>
+                        <li>使用了 <a href="https://github.com/satorumurmur/bibi">BiBi</a> 作为阅读器，一个非常棒的EPUB阅读器，感谢该项目作者的贡献</li>
+                        <li>对比 <a href="https://github.com/janeczku/calibre-web">calibre-web</a> 搭建的旧站在移动端灾难级的表现，现在明显要好得多</li>
+                        <li>还有一个 <a href="/bibi/?book=" target="_blank">WEB阅读器</a> 可以读取本地的EPUB电子书</li>
+                        <li>界面设计来源于calibre-web中的黑暗模式</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         // 当前页面和排序方式
@@ -161,6 +193,24 @@
         
         // 收藏书籍数组
         let favoriteBooks = JSON.parse(localStorage.getItem('favoriteBooks')) || [];
+        
+        // 显示关于弹窗
+        function showAboutModal() {
+            const modal = document.getElementById('about-modal');
+            modal.style.display = 'flex';
+            document.body.classList.add('modal-open');
+            document.querySelector('.main-content').classList.add('modal-open');
+            document.querySelector('.content').classList.add('modal-open');
+        }
+        
+        // 关闭关于弹窗
+        function closeAboutModal() {
+            const modal = document.getElementById('about-modal');
+            modal.style.display = 'none';
+            document.body.classList.remove('modal-open');
+            document.querySelector('.main-content').classList.remove('modal-open');
+            document.querySelector('.content').classList.remove('modal-open');
+        }
         
         // 检查是否需要加载更多内容
         function checkNeedMoreContent() {
@@ -452,7 +502,7 @@
             
             books.forEach(book => {
                 // 为封面URL添加缩略图参数
-                const coverUrl = book.cover_url ? `${book.cover_url}?size=thumb` : '/images/default-cover.svg';
+                const coverUrl = book.cover_url ? `${book.cover_url}?size=thumb` : '/images/loading.svg';
                 
                 const bookElement = document.createElement('div');
                 bookElement.className = 'book-card';
@@ -582,7 +632,7 @@
                         <div class="book-detail-layout">
                             <div class="book-detail-cover">
                                 <div class="cover-container" id="detail-cover-container">
-                                    <img src="${book.cover_url || '/images/default-cover.svg'}" alt="${book.title}" class="detail-cover-img">
+                                    <img src="${book.cover_url || '/images/loading.svg'}" alt="${book.title}" class="detail-cover-img">
                                 </div>
                             </div>
                             <div class="book-detail-info">
@@ -650,10 +700,18 @@
             }
         });
         
+        // 添加关于弹窗背景点击关闭事件
+        document.getElementById('about-modal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeAboutModal();
+            }
+        });
+        
         // 添加ESC键关闭弹窗
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 closeBookDetail();
+                closeAboutModal();
             }
         });
         
@@ -979,7 +1037,7 @@
             const container = document.getElementById('books-container');
             
             if (favoriteBooks.length === 0) {
-                container.innerHTML = '<div class="no-results">没有收藏的书籍</div>';
+                container.innerHTML = '<div class="no-results">请在书籍信息页的右上角点击收藏</div>';
                 return;
             }
             

@@ -890,6 +890,7 @@ app.get('*', (req, res) => {
 // 启动服务器
 app.listen(PORT, () => {
   console.log(`服务器运行在 http://localhost:${PORT}`);
+  console.log(`或者打开 http://127.0.0.1:${PORT}`);
 });
 
 // 当应用关闭时关闭数据库连接和取消定时任务
