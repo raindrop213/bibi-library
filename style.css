@@ -219,17 +219,17 @@ body {
 /* 书籍网格样式 */
 .books-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, 160px);
     gap: 20px;
 }
 
 /* 修改书卡片样式，移除整体点击效果 */
 .book-card {
     overflow: hidden;
-    height: 100%;
     display: flex;
     flex-direction: column;
-    transition: opacity .15s ease-out;
+    transition: all 0.2s ease;
+    position: relative;
 }
 
 /* 添加可点击元素的样式 */
@@ -246,19 +246,19 @@ body {
     width: 100%;
     overflow: hidden;
     border: 1px solid #eee;
-    position: relative; /* 添加相对定位 */
+    position: relative;
 }
 
 /* 添加封面悬停效果 */
 .book-card .cover-container::after {
-    content: '\F193'; /* Bootstrap Icons 的书籍图标代码 */
+    content: '\F193';
     font-family: 'bootstrap-icons';
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.8)); /* 渐变暗角效果 */
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.8));
     color: #fff;
     display: flex;
     align-items: center;
@@ -266,7 +266,7 @@ body {
     font-size: 2.5rem;
     opacity: 0;
     transition: opacity 0.3s ease;
-    border-radius: 4px; /* 添加圆角 */
+    border-radius: 4px;
 }
 
 .book-card .cover-container:hover::after {
