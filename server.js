@@ -136,7 +136,7 @@ app.get('/api/config', (req, res) => {
 // 获取书籍列表API
 app.get('/api/books', (req, res) => {
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
+  const limit = parseInt(req.query.limit) || config.pagination.pageSize;
   const offset = (page - 1) * limit;
   const search = req.query.search || '';
   const sort = req.query.sort || 'date-desc';
@@ -725,6 +725,10 @@ app.get('/api/categories', (req, res) => {
 
 // 获取丛书列表
 app.get('/api/series', (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = config.pagination.seriesPageSize;
+  const offset = (page - 1) * limit;
+  
   const query = `
     WITH SeriesFirstBook AS (
       SELECT 
@@ -748,14 +752,30 @@ app.get('/api/series', (req, res) => {
     LEFT JOIN books ON SeriesFirstBook.first_book_id = books.id
     GROUP BY series.id
     ORDER BY series.name COLLATE NOCASE
+    LIMIT ? OFFSET ?
   `;
   
-  db.all(query, [], (err, rows) => {
-    if (err) {
-      console.error('获取丛书列表时出错:', err.message);
-      return res.status(500).json({ error: '获取丛书列表失败' });
-    }
-    
+  // 获取总数
+  const countQuery = `
+    SELECT COUNT(*) as total FROM series
+  `;
+  
+  // 执行查询
+  Promise.all([
+    new Promise((resolve, reject) => {
+      db.get(countQuery, [], (err, row) => {
+        if (err) reject(err);
+        else resolve(row.total);
+      });
+    }),
+    new Promise((resolve, reject) => {
+      db.all(query, [limit, offset], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    })
+  ])
+  .then(([total, rows]) => {
     // 处理结果，添加封面URL
     const series = rows.map(row => {
       let cover_url = null;
@@ -771,7 +791,18 @@ app.get('/api/series', (req, res) => {
       };
     });
     
-    res.json({ series });
+    res.json({ 
+      series,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasMore: offset + limit < total
+    });
+  })
+  .catch(err => {
+    console.error('获取丛书列表时出错:', err.message);
+    return res.status(500).json({ error: '获取丛书列表失败' });
   });
 });
 

@@ -16,5 +16,13 @@ module.exports = {
     cleanInterval: 7,
     // 清理时间（24小时制，格式：小时:分钟）
     cleanTime: '03:00'
+  },
+
+  // 分页设置
+  pagination: {
+    // 每页显示数量
+    pageSize: 20,
+    // 丛书列表每页显示数量
+    seriesPageSize: 20
   }
 };

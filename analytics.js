@@ -1,5 +1,5 @@
 // Google Analytics 配置
-const GA_ID = 'G-ZF8G01WR2Y';
+const GA_ID = 'G-0B29XWKYNY';
 
 // 加载 Google Analytics 脚本
 const script = document.createElement('script');
