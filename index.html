@@ -542,10 +542,14 @@
                                     <div class="detail-author">${formatDetailAuthorLinks(book.authors)}</div>
                                 </div>
                                 <div class="detail-meta">
+                                    ${book.series ? `
                                     <div class="meta-item">
-                                        <span class="meta-label">出版日期</span>
-                                        <span class="meta-value">${formatDate(book.pubdate)}</span>
+                                        <span class="meta-label">系列</span>
+                                        <span class="meta-value">
+                                            <a href="/series/${encodeURIComponent(book.series.toLowerCase())}">${book.series}</a>
+                                        </span>
                                     </div>
+                                    ` : ''}
                                     ${book.publisher ? `
                                     <div class="meta-item">
                                         <span class="meta-label">出版商</span>
@@ -554,6 +558,10 @@
                                         </span>
                                     </div>
                                     ` : ''}
+                                    <div class="meta-item">
+                                        <span class="meta-label">出版日</span>
+                                        <span class="meta-value">${formatDate(book.pubdate)}</span>
+                                    </div>
                                     <div class="meta-item">
                                         <span class="meta-label">标签</span>
                                         <span class="meta-value">${formatTagLinks(book.tags)}</span>
@@ -963,19 +971,56 @@
                         navItem.classList.remove('active');
                     });
                     navItem.classList.add('active');
-                    fetch(`/api/${type}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            const items = data[type];
-                            const category = items.find(item => 
-                                item.name.toLowerCase() === decodeURIComponent(categoryName)
-                            );
-                            if (category) {
-                                currentCategory = category;
-                                currentCategoryType = type;
-                                showCategoryBooks(category.id, type);
-                            }
-                        });
+                    
+                    // 如果是丛书，使用搜索API
+                    if (type === 'series') {
+                        const decodedName = decodeURIComponent(categoryName);
+                        fetch(`/api/series?search=${encodeURIComponent(decodedName)}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                const items = data.series;
+                                // 查找完全匹配的系列
+                                const category = items.find(item => 
+                                    item.name.toLowerCase() === decodedName
+                                );
+                                if (category) {
+                                    currentCategory = category;
+                                    currentCategoryType = type;
+                                    showCategoryBooks(category.id, type);
+                                } else if (items.length > 0) {
+                                    // 如果没有完全匹配但有搜索结果，使用第一个
+                                    currentCategory = items[0];
+                                    currentCategoryType = type;
+                                    showCategoryBooks(items[0].id, type);
+                                } else {
+                                    // 没有找到匹配的系列
+                                    document.getElementById('books-container').innerHTML = '<div class="no-results">没有找到匹配的丛书系列</div>';
+                                    document.getElementById('books-container').style.display = 'block';
+                                    document.getElementById('category-list').style.display = 'none';
+                                }
+                            })
+                            .catch(error => {
+                                console.error('搜索丛书时出错:', error);
+                                document.getElementById('books-container').innerHTML = '<div class="error-message">搜索丛书时出错</div>';
+                                document.getElementById('books-container').style.display = 'block';
+                                document.getElementById('category-list').style.display = 'none';
+                            });
+                    } else {
+                        // 其他分类仍然使用原来的方式
+                        fetch(`/api/${type}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                const items = data[type];
+                                const category = items.find(item => 
+                                    item.name.toLowerCase() === decodeURIComponent(categoryName)
+                                );
+                                if (category) {
+                                    currentCategory = category;
+                                    currentCategoryType = type;
+                                    showCategoryBooks(category.id, type);
+                                }
+                            });
+                    }
                 }
             }
         } else {

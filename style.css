@@ -701,11 +701,11 @@ body {
     overflow: hidden;
 }
 
-.series-item .series-info {
-    padding: 15px;
+.series-info {
+    padding: 12px 3px 0px 3px;
 }
 
-.series-item .series-cover-placeholder {
+.series-cover-placeholder {
     width: 100%;
     aspect-ratio: var(--book-cover-ratio);
     background-color: #f5f6fa;
@@ -881,7 +881,7 @@ body {
 }
 
 .meta-label {
-    width: 120px;
+    width: 100px;
     color: var(--color-text-1);
 }
 

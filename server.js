@@ -384,9 +384,18 @@ app.get('/api/books/:id', (req, res) => {
       WHERE books_authors_link.book = ?
     `;
     
+    // 获取系列信息
+    const seriesQuery = `
+      SELECT series.name as series_name
+      FROM books_series_link
+      JOIN series ON books_series_link.series = series.id
+      WHERE books_series_link.book = ?
+    `;
+    
     console.log('执行标签查询:', tagsQuery);
     console.log('执行出版商查询:', publisherQuery);
     console.log('执行作者查询:', authorQuery);
+    console.log('执行系列查询:', seriesQuery);
     
     // 并行执行查询
     Promise.all([
@@ -422,9 +431,20 @@ app.get('/api/books/:id', (req, res) => {
             resolve(authors);
           }
         });
+      }),
+      new Promise((resolve, reject) => {
+        db.get(seriesQuery, [bookId], (err, series) => {
+          if (err) {
+            console.error('获取系列时出错:', err);
+            reject(err);
+          } else {
+            console.log('获取到的系列:', series);
+            resolve(series);
+          }
+        });
       })
     ])
-    .then(([tags, publisher, authors]) => {
+    .then(([tags, publisher, authors, series]) => {
       // 构建封面URL
       let cover_url = null;
       if (book.has_cover) {
@@ -456,6 +476,7 @@ app.get('/api/books/:id', (req, res) => {
           comment: book.comment,
           cover_url: cover_url,
           tags: tags.map(tag => tag.name),
+          series: series ? series.series_name : null,
           epub_url: `/api/books/${book.id}/epub`,
           epub_file: epubFile || null
         };
@@ -728,6 +749,15 @@ app.get('/api/series', (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = config.pagination.seriesPageSize;
   const offset = (page - 1) * limit;
+  const search = req.query.search || '';
+  
+  let whereClause = '';
+  let queryParams = [];
+  
+  if (search) {
+    whereClause = 'WHERE series.name LIKE ?';
+    queryParams.push(`%${search}%`);
+  }
   
   const query = `
     WITH SeriesFirstBook AS (
@@ -750,6 +780,7 @@ app.get('/api/series', (req, res) => {
     LEFT JOIN books_series_link ON series.id = books_series_link.series
     LEFT JOIN SeriesFirstBook ON series.id = SeriesFirstBook.series_id
     LEFT JOIN books ON SeriesFirstBook.first_book_id = books.id
+    ${whereClause}
     GROUP BY series.id
     ORDER BY series.name COLLATE NOCASE
     LIMIT ? OFFSET ?
@@ -757,19 +788,19 @@ app.get('/api/series', (req, res) => {
   
   // 获取总数
   const countQuery = `
-    SELECT COUNT(*) as total FROM series
+    SELECT COUNT(*) as total FROM series ${whereClause}
   `;
   
   // 执行查询
   Promise.all([
     new Promise((resolve, reject) => {
-      db.get(countQuery, [], (err, row) => {
+      db.get(countQuery, queryParams, (err, row) => {
         if (err) reject(err);
         else resolve(row.total);
       });
     }),
     new Promise((resolve, reject) => {
-      db.all(query, [limit, offset], (err, rows) => {
+      db.all(query, [...queryParams, limit, offset], (err, rows) => {
         if (err) reject(err);
         else resolve(rows);
       });
