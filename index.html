@@ -409,8 +409,7 @@
                 bookElement.className = 'book-card';
                 bookElement.innerHTML = `
                     <div class="cover-container clickable">
-                        <img src="/images/loading.svg" alt="加载中" class="book-cover loading-placeholder">
-                        <img src="${coverUrl}" alt="${book.title}" class="book-cover" style="display: none;" onload="this.style.display='block'; this.previousElementSibling.style.display='none';">
+                        <img src="${coverUrl}" alt="${book.title}" class="book-cover" onload="this.classList.add('loaded')">
                     </div>
                     <div class="book-info">
                         <div class="book-title" onclick="showBookDetail(${book.id})">${book.title}</div>
@@ -534,8 +533,7 @@
                         <div class="book-detail-layout">
                             <div class="book-detail-cover">
                                 <div class="cover-container" id="detail-cover-container">
-                                    <img src="/images/loading.svg" alt="加载中" class="detail-cover-img loading-placeholder">
-                                    <img src="${book.cover_url || '/images/loading.svg'}" alt="${book.title}" class="detail-cover-img" style="display: none;" onload="this.style.display='block'; this.previousElementSibling.style.display='none';">
+                                    <img src="${book.cover_url || '/images/loading.svg'}" alt="${book.title}" class="detail-cover-img" onload="this.classList.add('loaded')">
                                 </div>
                             </div>
                             <div class="book-detail-info">
@@ -706,8 +704,7 @@
                         ${item.cover_url 
                             ? `<div class="cover-container">
                                 <div class="book-count-badge">${item.book_count}</div>
-                                <img src="/images/loading.svg" alt="加载中" class="series-cover loading-placeholder">
-                                <img src="${item.cover_url}?size=thumb" alt="${item.name}" class="series-cover" style="display: none;" onload="this.style.display='block'; this.previousElementSibling.style.display='none';">
+                                <img src="${item.cover_url}?size=thumb" alt="${item.name}" class="book-cover" onload="this.classList.add('loaded')">
                               </div>`
                             : `<div class="series-cover-placeholder">
                                 <div class="book-count-badge">${item.book_count}</div>

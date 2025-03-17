@@ -701,13 +701,6 @@ body {
     overflow: hidden;
 }
 
-.series-item .series-cover {
-    width: 100%;
-    aspect-ratio: var(--book-cover-ratio);
-    object-fit: cover;
-    border-bottom: 1px solid #eee;
-}
-
 .series-item .series-info {
     padding: 15px;
 }
@@ -797,6 +790,17 @@ body {
     border-radius: 4px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
     position: relative; /* 添加相对定位 */
+    background: url('/images/loading.svg') no-repeat center center;
+    background-size: 60% 60%; /* 调整loading.svg的大小为容器的30% */
+}
+
+.book-cover, .detail-cover-img {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.book-cover.loaded, .detail-cover-img.loaded{
+    opacity: 0.9;
 }
 
 /* 为弹窗中的封面添加悬停效果 */
@@ -1007,21 +1011,4 @@ body {
     right: 15px;
     font-size: 0.6rem;
     color: #818181;
-}
-
-.loading-placeholder {
-    opacity: 0.7;
-    transition: opacity 0.3s ease;
-}
-
-.book-cover,
-.series-cover,
-.detail-cover-img {
-    transition: opacity 0.3s ease;
-}
-
-.loading-placeholder {
-    width: 30%;
-    height: 30%;
-    object-fit: cover;
 }
