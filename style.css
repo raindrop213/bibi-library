@@ -33,7 +33,7 @@ body {
 
 /* 侧边栏样式 */
 .sidebar {
-    width: 210px;
+    width: 180px;
     background-color: var(--color-background-2);
     color: #ecf0f1;
     flex-shrink: 0;
@@ -48,16 +48,21 @@ body {
 }
 
 .sidebar-header {
-    padding: 18px;
+    padding: 20px;
     height: 60px;
-    cursor: pointer;
     background-color: var(--color-background-1);
+    text-align: left;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    width: auto;
+    cursor: pointer;
 }
 
 .sidebar-title {
-    font-size: 1rem;
-    font-weight: bold;
+    font-size: 1.2rem;
     color: var(--color-tertiary);
+    font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
 }
 
 /* 添加移动端标题样式 */
@@ -107,8 +112,8 @@ body {
 .main-content {
     flex-grow: 1;
     position: relative;
-    margin-left: 210px;
-    width: calc(100% - 210px);
+    margin-left: 180px;
+    width: calc(100% - 180px);
     height: 100vh;
     overflow: hidden;
 }
@@ -141,7 +146,7 @@ body {
     display: flex;
     position: fixed;
     top: 0;
-    left: 210px;
+    left: 180px;
     right: 0;
     justify-content: space-between;
     align-items: center;
@@ -356,16 +361,6 @@ body {
         flex-direction: row;
     }
     
-    .sidebar-header {
-        height: 60px;
-        padding: 10px 15px;
-        text-align: left;
-        flex: 0 0 auto;
-        display: flex;
-        align-items: center;
-        width: auto;
-    }
-    
     .nav {
         display: flex;
         flex-direction: row;
@@ -380,7 +375,7 @@ body {
         /* 自定义滚动条样式 */
         scrollbar-width: none; /* Firefox */
         flex: 1; /* 添加flex: 1使导航栏占据剩余空间 */
-        width: calc(100% - 210px); /* 减去sidebar-header的宽度 */
+        width: calc(100% - 180px); /* 减去sidebar-header的宽度 */
     }
     
     .nav-item {
@@ -425,6 +420,7 @@ body {
     .header {
         left: 0;
         top: 60px; /* 在sidebar下方 */
+        height: 50px;
         position: fixed;
         width: 100%;
         box-sizing: border-box;
@@ -440,7 +436,7 @@ body {
     }
     
     .content {
-        margin-top: 60px; /* 为固定的header留出空间 */
+        margin-top: 50px; /* 为固定的header留出空间 */
         height: calc(100vh - 120px); /* 减去sidebar和header的高度 */
         overflow-y: auto;
         overflow-x: hidden;
@@ -469,11 +465,6 @@ body {
     .page-title {
         max-width: 55%; /* 限制移动端标题宽度 */
         font-size: 0.9rem; /* 稍微减小字体大小 */
-    }
-    
-    /* 移动端显示简短标题 */
-    .sidebar-title {
-        font-size: 1.1rem; /* 稍微增大字体 */
     }
     
     .sidebar-title::before {
