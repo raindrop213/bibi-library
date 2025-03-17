@@ -649,6 +649,7 @@ body {
     display: flex;
     flex-direction: row; /* PC端默认为左右布局 */
     width: 100%;
+    height: max-content;
 }
 
 

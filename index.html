@@ -578,7 +578,7 @@
                         .replace(/[\/\\:*?"<>|]/g, '_') // 替换Windows和Unix系统中的非法字符
                         .replace(/\s+/g, ' '); // 将多个空格替换为单个空格
                     
-                    downloadButton.title = `下载 ${customFilename})`;
+                    downloadButton.title = `下载 ${customFilename}`;
                     
                     readButton.onclick = function() {
                         window.location.href = `/bibi/?book=${encodeURIComponent(book.path + '/' + book.epub_file)}`;
