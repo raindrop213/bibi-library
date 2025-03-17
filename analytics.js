@@ -1,13 +1,15 @@
-(function() {
-    const GA_ID = 'G-ZF8G01WR2Y'; // 替换为你的 GA ID
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
-    document.head.appendChild(script);
+// Google Analytics 配置
+const GA_ID = 'G-ZF8G01WR2Y';
 
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){ dataLayer.push(arguments); }
-    window.gtag = gtag; // 方便在其他地方调用 gtag
-    gtag('js', new Date());
-    gtag('config', GA_ID);
-})();
+// 加载 Google Analytics 脚本
+const script = document.createElement('script');
+script.async = true;
+script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
+document.head.appendChild(script);
+
+// Google tag (gtag.js)
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+
+gtag('config', GA_ID);
