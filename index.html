@@ -216,14 +216,23 @@
         
         // 检查是否需要加载更多内容
         function checkNeedMoreContent() {
-            // 如果当前不是在加载中，且还有更多书籍可加载
+            const contentElement = document.querySelector('.content');
+            
+            // 如果当前是在书籍或者分类详情页面，且有更多书籍可加载
             if (!isLoading && hasMoreBooks && (currentSection === 'books' || currentCategory)) {
-                const contentElement = document.querySelector('.content');
-                
                 // 如果内容没有出现滚动条，说明内容不足以填满视图区域
                 if (contentElement.scrollHeight <= contentElement.clientHeight) {
                     currentPage++;
                     loadBooks();
+                    return true;
+                }
+            }
+            // 如果当前是在丛书列表页，且有更多丛书可加载
+            else if (!isLoadingCategories && hasMoreCategories && currentSection === 'series' && !currentCategory) {
+                // 如果内容没有出现滚动条，说明内容不足以填满视图区域
+                if (contentElement.scrollHeight <= contentElement.clientHeight) {
+                    categoryPage++;
+                    loadCategories('series', categoryPage, true);
                     return true;
                 }
             }
@@ -279,44 +288,94 @@
             
             // 搜索输入事件
             document.getElementById('search-input').addEventListener('input', debounce(function() {
-                // 重置页面
-                currentPage = 1;
-                hasMoreBooks = true;
+                const searchQuery = this.value.trim();
                 
-                // 清空书籍容器
-                document.getElementById('books-container').innerHTML = '';
-                
-                // 重新加载书籍
-                loadBooks();
+                // 根据当前页面不同处理搜索
+                if (currentSection === 'series' && !currentCategory) {
+                    // 丛书列表页面搜索
+                    categoryPage = 1;
+                    hasMoreCategories = true;
+                    document.getElementById('category-list').innerHTML = '';
+                    
+                    if (searchQuery) {
+                        // 使用搜索API
+                        fetch(`/api/series?search=${encodeURIComponent(searchQuery)}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                const items = data.series;
+                                if (items.length > 0) {
+                                    // 更新当前显示
+                                    isLoadingCategories = false;
+                                    hasMoreCategories = data.hasMore;
+                                    
+                                    // 渲染搜索结果
+                                    const container = document.getElementById('category-list');
+                                    items.forEach(item => {
+                                        const categoryElement = document.createElement('div');
+                                        categoryElement.className = 'book-card series-item';
+                                        categoryElement.innerHTML = `
+                                            ${item.cover_url 
+                                                ? `<div class="cover-container">
+                                                    <div class="book-count-badge">${item.book_count}</div>
+                                                    <img src="${item.cover_url}?size=thumb" alt="${item.name}" class="book-cover" onload="this.classList.add('loaded')">
+                                                  </div>`
+                                                : `<div class="series-cover-placeholder">
+                                                    <div class="book-count-badge">${item.book_count}</div>
+                                                    <i class="bi bi-book"></i>
+                                                  </div>`
+                                            }
+                                            <div class="series-info">
+                                                <div class="book-title">${item.name}</div>
+                                            </div>
+                                        `;
+                                        
+                                        // 点击分类项显示相关书籍
+                                        categoryElement.addEventListener('click', () => {
+                                            currentCategory = item;
+                                            currentCategoryType = 'series';
+                                            showCategoryBooks(item.id, 'series');
+                                        });
+                                        
+                                        container.appendChild(categoryElement);
+                                    });
+                                } else {
+                                    document.getElementById('category-list').innerHTML = '<div class="no-results">没有找到匹配的丛书系列</div>';
+                                }
+                            })
+                            .catch(error => {
+                                console.error('搜索丛书时出错:', error);
+                                document.getElementById('category-list').innerHTML = '<div class="error-message">搜索丛书时出错</div>';
+                            });
+                    } else {
+                        // 如果搜索为空，重新加载全部丛书
+                        loadCategories('series');
+                    }
+                } else {
+                    // 书籍页面搜索
+                    currentPage = 1;
+                    hasMoreBooks = true;
+                    document.getElementById('books-container').innerHTML = '';
+                    loadBooks();
+                }
             }, 500));
             
             // 滚动事件监听，实现无限滚动
             const contentElement = document.querySelector('.content');
             contentElement.addEventListener('scroll', function() {
-                // 书籍无限滚动
-                if (currentSection === 'books' || currentSection === 'favorites' || currentCategory) {
-                    if (isLoading || !hasMoreBooks) return;
-                    
-                    const scrollHeight = this.scrollHeight;
-                    const scrollTop = this.scrollTop;
-                    const clientHeight = this.clientHeight;
-                    
-                    // 当滚动到内容底部附近时加载更多
-                    if (scrollTop + clientHeight >= scrollHeight - 200) {
+                const scrollHeight = this.scrollHeight;
+                const scrollTop = this.scrollTop;
+                const clientHeight = this.clientHeight;
+                const scrollThreshold = scrollHeight - 200;
+                
+                // 当滚动到内容底部附近时加载更多
+                if (scrollTop + clientHeight >= scrollThreshold) {
+                    // 书籍或分类详情页无限滚动
+                    if ((currentSection === 'books' || currentSection === 'favorites' || currentCategory) && !isLoading && hasMoreBooks) {
                         currentPage++;
                         loadBooks();
                     }
-                }
-                // 丛书分类无限滚动
-                else if (currentSection === 'series') {
-                    if (isLoadingCategories || !hasMoreCategories) return;
-                    
-                    const scrollHeight = this.scrollHeight;
-                    const scrollTop = this.scrollTop;
-                    const clientHeight = this.clientHeight;
-                    
-                    // 当滚动到内容底部附近时加载更多
-                    if (scrollTop + clientHeight >= scrollHeight - 200) {
+                    // 丛书分类无限滚动
+                    else if (currentSection === 'series' && !currentCategory && !isLoadingCategories && hasMoreCategories) {
                         categoryPage++;
                         loadCategories('series', categoryPage, true);
                     }
@@ -405,10 +464,14 @@
                 // 为封面URL添加缩略图参数
                 const coverUrl = book.cover_url ? `${book.cover_url}?size=thumb` : '/images/loading.svg';
                 
+                // 判断是否为系列书籍且有系列号
+                const isSeriesBook = currentCategoryType === 'series' && book.series_index;
+                
                 const bookElement = document.createElement('div');
                 bookElement.className = 'book-card';
                 bookElement.innerHTML = `
                     <div class="cover-container clickable">
+                        ${isSeriesBook ? `<div class="series-index-badge">${formatSeriesIndex(book.series_index)}</div>` : ''}
                         <img src="${coverUrl}" alt="${book.title}" class="book-cover" onload="this.classList.add('loaded')">
                     </div>
                     <div class="book-info">
@@ -427,6 +490,18 @@
                 
                 container.appendChild(bookElement);
             });
+        }
+        
+        // 格式化系列号
+        function formatSeriesIndex(seriesIndex) {
+            if (seriesIndex === null || seriesIndex === undefined) return '';
+            
+            // 确保系列号为数字类型
+            const numIndex = parseFloat(seriesIndex);
+            if (isNaN(numIndex)) return seriesIndex.toString();
+            
+            // 如果是整数，不显示小数部分
+            return Number.isInteger(numIndex) ? numIndex.toString() : numIndex.toFixed(1);
         }
         
         // 格式化作者链接
@@ -514,7 +589,10 @@
                     const formatDate = (dateStr) => {
                         if (!dateStr) return '未知';
                         const date = new Date(dateStr);
-                        return date.toLocaleDateString('zh-CN');
+                        const year = date.getFullYear();
+                        const month = date.getMonth() + 1;
+                        const day = date.getDate();
+                        return `${year}年${month}月${day}日`;
                     };
                     
                     // 格式化详情页面的作者链接
@@ -547,6 +625,7 @@
                                         <span class="meta-label">系列</span>
                                         <span class="meta-value">
                                             <a href="/series/${encodeURIComponent(book.series.toLowerCase())}">${book.series}</a>
+                                            ${book.series_index ? ` ${formatSeriesIndex(book.series_index)}` : ''}
                                         </span>
                                     </div>
                                     ` : ''}
@@ -641,13 +720,26 @@
         function loadCategories(type, page = 1, append = false) {
             if (isLoadingCategories && append) return;
             
+            isLoadingCategories = true;
+            
             if (append) {
-                isLoadingCategories = true;
-                document.getElementById('category-loading-indicator').style.display = 'block';
+                // 显示加载指示器
+                if (document.getElementById('category-loading-indicator')) {
+                    document.getElementById('category-loading-indicator').style.display = 'block';
+                }
             } else {
                 document.getElementById('category-list').style.display = 'grid';
                 document.getElementById('books-container').style.display = 'none';
                 document.getElementById('sort-buttons').style.display = 'none';
+                
+                // 确保加载指示器存在
+                if (!document.getElementById('category-loading-indicator')) {
+                    const loadingIndicator = document.createElement('div');
+                    loadingIndicator.className = 'loading';
+                    loadingIndicator.id = 'category-loading-indicator';
+                    loadingIndicator.innerHTML = '<i class="bi bi-arrow-repeat"></i> 正在加载更多...';
+                    document.querySelector('.content').appendChild(loadingIndicator);
+                }
                 
                 // 更新页面标题
                 const typeNames = {
@@ -669,6 +761,9 @@
                 categoryPage = 1;
                 hasMoreCategories = true;
                 allCategoryItems = [];
+                
+                // 清空分类列表
+                document.getElementById('category-list').innerHTML = '';
             }
             
             // 构建API URL
@@ -677,409 +772,397 @@
             fetch(apiUrl)
                 .then(response => response.json())
                 .then(data => {
-                    const container = document.getElementById('category-list');
+                    isLoadingCategories = false;
+                    document.getElementById('category-loading-indicator').style.display = 'none';
                     
-                    if (!append) {
-                        container.innerHTML = '';
-                        
-                        // 添加加载更多指示器
-                        if (type === 'series') {
-                            const loadingIndicator = document.createElement('div');
-                            loadingIndicator.className = 'loading';
-                            loadingIndicator.id = 'category-loading-indicator';
-                            loadingIndicator.style.display = 'none';
-                            loadingIndicator.innerHTML = '<i class="bi bi-arrow-repeat"></i> 正在加载更多...';
-                            container.parentNode.insertBefore(loadingIndicator, container.nextSibling);
-                        }
+                    const container = document.getElementById('category-list');
+                    const items = data[type];
+                    
+                    // 对于丛书，使用服务器返回的分页信息
+                    if (type === 'series') {
+                        hasMoreCategories = data.hasMore;
+                        categoryPage = data.page;
+                    } else {
+                        allCategoryItems = items; // 存储所有项目
                     }
                     
-                    const items = data[type];
-            
-            // 对于丛书，使用服务器返回的分页信息
-            if (type === 'series') {
-                hasMoreCategories = data.hasMore;
-                categoryPage = data.page;
-            } else {
-                allCategoryItems = items; // 存储所有项目
-            }
-            
-            items.forEach(item => {
-                const categoryElement = document.createElement('div');
-                if (type === 'series') {
-                    categoryElement.className = type === 'series' ? 'book-card series-item' : 'book-card';
-                    // 丛书项的特殊显示
-                    categoryElement.innerHTML = `
-                        ${item.cover_url 
-                            ? `<div class="cover-container">
-                                <div class="book-count-badge">${item.book_count}</div>
-                                <img src="${item.cover_url}?size=thumb" alt="${item.name}" class="book-cover" onload="this.classList.add('loaded')">
-                              </div>`
-                            : `<div class="series-cover-placeholder">
-                                <div class="book-count-badge">${item.book_count}</div>
-                                <i class="bi bi-book"></i>
-                              </div>`
+                    items.forEach(item => {
+                        const categoryElement = document.createElement('div');
+                        if (type === 'series') {
+                            categoryElement.className = 'book-card series-item';
+                            // 丛书项的特殊显示
+                            categoryElement.innerHTML = `
+                                ${item.cover_url 
+                                    ? `<div class="cover-container">
+                                        <div class="book-count-badge">${item.book_count}</div>
+                                        <img src="${item.cover_url}?size=thumb" alt="${item.name}" class="book-cover" onload="this.classList.add('loaded')">
+                                      </div>`
+                                    : `<div class="series-cover-placeholder">
+                                        <div class="book-count-badge">${item.book_count}</div>
+                                        <i class="bi bi-book"></i>
+                                      </div>`
+                                }
+                                <div class="series-info">
+                                    <div class="book-title">${item.name}</div>
+                                </div>
+                            `;
+                        } else {
+                            categoryElement.className = 'category-item';
+                            // 其他分类的普通显示
+                            categoryElement.innerHTML = `
+                                <div class="category-name">${item.name}</div>
+                                <div class="category-count">× ${item.book_count}</div>
+                            `;
                         }
-                        <div class="series-info">
-                            <div class="book-title">${item.name}</div>
-                        </div>
-                    `;
-                } else {
-                    categoryElement.className = type === 'series' ? 'category-item series-item' : 'category-item';
-                    // 其他分类的普通显示
-                    categoryElement.innerHTML = `
-                        <div class="category-name">${item.name}</div>
-                        <div class="category-count">× ${item.book_count}</div>
-                    `;
-                }
-                
-                // 点击分类项显示相关书籍
-                categoryElement.addEventListener('click', () => {
-                    currentCategory = item;
-                    currentCategoryType = type;
-                    showCategoryBooks(item.id, type);
+                        
+                        // 点击分类项显示相关书籍
+                        categoryElement.addEventListener('click', () => {
+                            currentCategory = item;
+                            currentCategoryType = type;
+                            showCategoryBooks(item.id, type);
+                        });
+                        
+                        container.appendChild(categoryElement);
+                    });
+                    
+                    // 检查是否需要加载更多内容
+                    setTimeout(() => {
+                        checkNeedMoreContent();
+                    }, 200);
+                })
+                .catch(error => {
+                    console.error(`加载${type}列表时出错:`, error);
+                    isLoadingCategories = false;
+                    if (document.getElementById('category-loading-indicator')) {
+                        document.getElementById('category-loading-indicator').style.display = 'none';
+                    }
+                    
+                    if (!append) {
+                        document.getElementById('category-list').innerHTML = `
+                            <div class="error-message">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <p>加载分类列表时出错</p>
+                                <button class="retry-button" onclick="loadCategories('${type}')">重试</button>
+                            </div>
+                        `;
+                    }
                 });
-                
-                container.appendChild(categoryElement);
-            });
-            
-            isLoadingCategories = false;
-            if (type === 'series') {
-                document.getElementById('category-loading-indicator').style.display = 'none';
-            }
-        })
-        .catch(error => {
-            console.error(`加载${type}列表时出错:`, error);
-            isLoadingCategories = false;
-            if (type === 'series') {
-                document.getElementById('category-loading-indicator').style.display = 'none';
-            }
-            
-            if (!append) {
-                document.getElementById('category-list').innerHTML = `
-                    <div class="error-message">
-                        <i class="bi bi-exclamation-triangle"></i>
-                        <p>加载分类列表时出错</p>
-                        <button class="retry-button" onclick="loadCategories('${type}')">重试</button>
-                    </div>
-                `;
-            }
-        });
-    }
-        
-    // 显示分类相关的书籍
-    function showCategoryBooks(categoryId, type) {
-        document.getElementById('category-list').style.display = 'none';
-        document.getElementById('books-container').style.display = 'grid';
-        document.getElementById('sort-buttons').style.display = 'none';
-        
-        // 更新页面标题
-        const categoryName = currentCategory.name;
-        const typeNames = {
-            'publishers': '出版',
-            'authors': '作者',
-            'categories': '分类',
-            'series': '丛书',
-            'languages': '语言'
-        };
-
-        document.querySelector('.page-title').innerHTML = `
-            <div class="breadcrumb">
-                <span class="breadcrumb-item" onclick="loadCategories('${type}')">${typeNames[type]}</span>
-                <span class="breadcrumb-separator">></span>
-                <span class="breadcrumb-current">${categoryName}</span>
-            </div>
-        `;
-        
-        // 更新 URL
-        history.pushState(null, null, `/${type}/${encodeURIComponent(categoryName.toLowerCase())}`);
-        
-        // 重置分页并加载书籍
-        currentPage = 1;
-        hasMoreBooks = true;
-        document.getElementById('books-container').innerHTML = '';
-        loadBooks();
-    }
-        
-    // 切换收藏状态
-    function toggleFavorite(book) {
-        const favoriteButton = document.getElementById('favorite-button');
-        const index = favoriteBooks.findIndex(favBook => favBook.id === book.id);
-        
-        if (index === -1) {
-            // 添加到收藏
-            const bookToSave = {
-                id: book.id,
-                title: book.title,
-                author: book.authors,
-                cover_url: book.cover_url,
-                date_added: new Date().toISOString()
-            };
-            favoriteBooks.push(bookToSave);
-            favoriteButton.innerHTML = '<i class="bi bi-bookmark-check-fill"></i>';
-            favoriteButton.title = '取消收藏';
-        } else {
-            // 从收藏中移除
-            favoriteBooks.splice(index, 1);
-            favoriteButton.innerHTML = '<i class="bi bi-bookmark-plus"></i>';
-            favoriteButton.title = '收藏';
         }
         
-        // 保存到本地存储
-        localStorage.setItem('favoriteBooks', JSON.stringify(favoriteBooks));
-        
-        // 如果当前在收藏页面，刷新显示
-        if (currentSection === 'favorites') {
-            loadFavoriteBooks();
-        }
-    }
-        
-    // 清理内容窗口的函数
-    function clearContentWindow() {
-        // 清空书籍容器
-        document.getElementById('books-container').innerHTML = '';
-        // 隐藏分类列表
-        document.getElementById('category-list').style.display = 'none';
-        // 显示书籍容器
-        document.getElementById('books-container').style.display = 'grid';
-        // 隐藏排序按钮
-        document.getElementById('sort-buttons').style.display = 'none';
-        // 隐藏加载指示器
-        document.getElementById('loading-indicator').style.display = 'none';
-        
-        // 移除分类加载指示器（如果存在）
-        const categoryLoadingIndicator = document.getElementById('category-loading-indicator');
-        if (categoryLoadingIndicator) {
-            categoryLoadingIndicator.remove();
-        }
-    }
-
-    // 导航项点击事件处理函数
-    function handleNavItemClick(page) {
-        if (page !== currentSection) {
-            // 先清理内容窗口
-            clearContentWindow();
-            
-            // 移除所有活动类
-            document.querySelectorAll('.nav-item').forEach(navItem => {
-                navItem.classList.remove('active');
-            });
-            
-            // 添加活动类到当前项
-            document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
-            
-            // 更新当前部分
-            currentSection = page;
-            currentPage = 1; // 重置页码为1
-            hasMoreBooks = true; // 默认允许无限滚动
-            currentCategory = null;
-            currentCategoryType = null;
-            
-            // 重置分类页码
-            if (page === 'series') {
-                categoryPage = 1;
-                hasMoreCategories = true;
-            }
+        // 显示分类相关的书籍
+        function showCategoryBooks(categoryId, type) {
+            document.getElementById('category-list').style.display = 'none';
+            document.getElementById('books-container').style.display = 'grid';
+            document.getElementById('sort-buttons').style.display = 'none';
             
             // 更新页面标题
+            const categoryName = currentCategory.name;
             const typeNames = {
                 'publishers': '出版',
                 'authors': '作者',
                 'categories': '分类',
                 'series': '丛书',
-                'languages': '语言',
-                'books': '书籍',
-                'favorites': '收藏'
+                'languages': '语言'
             };
-            document.querySelector('.page-title').textContent = typeNames[page];
+
+            document.querySelector('.page-title').innerHTML = `
+                <div class="breadcrumb">
+                    <span class="breadcrumb-item" onclick="loadCategories('${type}')">${typeNames[type]}</span>
+                    <span class="breadcrumb-separator">></span>
+                    <span class="breadcrumb-current">${categoryName}</span>
+                </div>
+            `;
             
-            // 只有当URL需要更新时才调用pushState
-            if (window.location.pathname !== `/${page}`) {
-                history.pushState(null, null, `/${page}`);
+            // 更新 URL
+            history.pushState(null, null, `/${type}/${encodeURIComponent(categoryName.toLowerCase())}`);
+            
+            // 重置分页并加载书籍
+            currentPage = 1;
+            hasMoreBooks = true;
+            document.getElementById('books-container').innerHTML = '';
+            loadBooks();
+        }
+        
+        // 切换收藏状态
+        function toggleFavorite(book) {
+            const favoriteButton = document.getElementById('favorite-button');
+            const index = favoriteBooks.findIndex(favBook => favBook.id === book.id);
+            
+            if (index === -1) {
+                // 添加到收藏
+                const bookToSave = {
+                    id: book.id,
+                    title: book.title,
+                    author: book.authors,
+                    cover_url: book.cover_url,
+                    date_added: new Date().toISOString()
+                };
+                favoriteBooks.push(bookToSave);
+                favoriteButton.innerHTML = '<i class="bi bi-bookmark-check-fill"></i>';
+                favoriteButton.title = '取消收藏';
+            } else {
+                // 从收藏中移除
+                favoriteBooks.splice(index, 1);
+                favoriteButton.innerHTML = '<i class="bi bi-bookmark-plus"></i>';
+                favoriteButton.title = '收藏';
             }
             
-            // 根据页面类型显示不同内容
-            if (['publishers', 'authors', 'categories', 'series', 'languages'].includes(page)) {
-                loadCategories(page);
-            } else if (page === 'books') {
-                // 如果是books页面，默认激活date-desc排序按钮
-                document.getElementById('sort-buttons').style.display = 'flex';
-                document.querySelectorAll('.sort-button').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                document.querySelector('.sort-button[data-sort="date-desc"]').classList.add('active');
-                currentSort = 'date-desc';
-                loadBooks();
-            } else if (page === 'favorites') {
-                // 如果是收藏页面，显示收藏的书籍
+            // 保存到本地存储
+            localStorage.setItem('favoriteBooks', JSON.stringify(favoriteBooks));
+            
+            // 如果当前在收藏页面，刷新显示
+            if (currentSection === 'favorites') {
                 loadFavoriteBooks();
-            } else {
-                loadBooks();
             }
         }
-    }
-
-    // 加载收藏的书籍
-    function loadFavoriteBooks() {
-        // 确保先清理内容窗口
-        clearContentWindow();
         
-        // 强制重置状态
-        currentSection = 'favorites';
-        currentPage = 1;
-        hasMoreBooks = false; // 收藏页面不需要无限滚动
-        currentCategory = null;
-        currentCategoryType = null;
-        
-        // 确保URL是正确的
-        if (window.location.pathname !== '/favorites') {
-            history.replaceState(null, null, '/favorites');
+        // 清理内容窗口的函数
+        function clearContentWindow() {
+            // 清空书籍容器
+            document.getElementById('books-container').innerHTML = '';
+            // 隐藏分类列表
+            document.getElementById('category-list').style.display = 'none';
+            // 显示书籍容器
+            document.getElementById('books-container').style.display = 'grid';
+            // 隐藏排序按钮
+            document.getElementById('sort-buttons').style.display = 'none';
+            // 隐藏加载指示器
+            document.getElementById('loading-indicator').style.display = 'none';
+            
+            // 移除分类加载指示器（如果存在）
+            const categoryLoadingIndicator = document.getElementById('category-loading-indicator');
+            if (categoryLoadingIndicator) {
+                categoryLoadingIndicator.remove();
+            }
         }
-        
-        // 确保导航项高亮正确
-        document.querySelectorAll('.nav-item').forEach(navItem => {
-            navItem.classList.remove('active');
-        });
-        document.querySelector('.nav-item[data-page="favorites"]').classList.add('active');
-        
-        const container = document.getElementById('books-container');
-        
-        if (favoriteBooks.length === 0) {
-            container.innerHTML = '<div class="no-results">请在书籍信息页的右上角点击收藏</div>';
-            return;
-        }
-        
-        // 按添加时间倒序排列
-        const sortedBooks = [...favoriteBooks].sort((a, b) => {
-            return new Date(b.date_added) - new Date(a.date_added);
-        });
-        
-        // 渲染收藏的书籍
-        renderBooks(sortedBooks);
-    }
 
-    // 根据URL路径更新页面内容的函数
-    function handleUrlChange(urlPath) {
-        // 检查URL是否包含分类信息
-        const categoryMatch = urlPath.match(/^\/([a-z]+)\/([^\/]+)$/);
-        if (categoryMatch) {
-            const [, type, categoryName] = categoryMatch;
-            if (['publishers', 'authors', 'categories', 'series', 'languages'].includes(type)) {
-                currentSection = type;
-                const navItem = document.querySelector(`.nav-item[data-page="${type}"]`);
-                if (navItem) {
-                    document.querySelectorAll('.nav-item').forEach(navItem => {
-                        navItem.classList.remove('active');
-                    });
-                    navItem.classList.add('active');
-                    
-                    // 如果是丛书，使用搜索API
-                    if (type === 'series') {
-                        const decodedName = decodeURIComponent(categoryName);
-                        fetch(`/api/series?search=${encodeURIComponent(decodedName)}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                const items = data.series;
-                                // 查找完全匹配的系列
-                                const category = items.find(item => 
-                                    item.name.toLowerCase() === decodedName
-                                );
-                                if (category) {
-                                    currentCategory = category;
-                                    currentCategoryType = type;
-                                    showCategoryBooks(category.id, type);
-                                } else if (items.length > 0) {
-                                    // 如果没有完全匹配但有搜索结果，使用第一个
-                                    currentCategory = items[0];
-                                    currentCategoryType = type;
-                                    showCategoryBooks(items[0].id, type);
-                                } else {
-                                    // 没有找到匹配的系列
-                                    document.getElementById('books-container').innerHTML = '<div class="no-results">没有找到匹配的丛书系列</div>';
-                                    document.getElementById('books-container').style.display = 'block';
-                                    document.getElementById('category-list').style.display = 'none';
-                                }
-                            })
-                            .catch(error => {
-                                console.error('搜索丛书时出错:', error);
-                                document.getElementById('books-container').innerHTML = '<div class="error-message">搜索丛书时出错</div>';
-                                document.getElementById('books-container').style.display = 'block';
-                                document.getElementById('category-list').style.display = 'none';
-                            });
-                    } else {
-                        // 其他分类仍然使用原来的方式
-                        fetch(`/api/${type}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                const items = data[type];
-                                const category = items.find(item => 
-                                    item.name.toLowerCase() === decodeURIComponent(categoryName)
-                                );
-                                if (category) {
-                                    currentCategory = category;
-                                    currentCategoryType = type;
-                                    showCategoryBooks(category.id, type);
-                                }
-                            });
-                    }
+        // 导航项点击事件处理函数
+        function handleNavItemClick(page) {
+            if (page !== currentSection) {
+                // 先清理内容窗口
+                clearContentWindow();
+                
+                // 移除所有活动类
+                document.querySelectorAll('.nav-item').forEach(navItem => {
+                    navItem.classList.remove('active');
+                });
+                
+                // 添加活动类到当前项
+                document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
+                
+                // 更新当前部分
+                currentSection = page;
+                currentPage = 1; // 重置页码为1
+                hasMoreBooks = true; // 默认允许无限滚动
+                currentCategory = null;
+                currentCategoryType = null;
+                
+                // 重置分类页码
+                if (page === 'series' || page === 'categories' || page === 'publishers' || page === 'authors' || page === 'languages') {
+                    categoryPage = 1;
+                    hasMoreCategories = true;
                 }
-            }
-        } else {
-            const bookMatch = urlPath.match(/\/book\/(\d+)/);
-            if (bookMatch) {
-                const bookId = parseInt(bookMatch[1]);
-                showBookDetail(bookId);
-            } else {
-                const sectionMatch = urlPath.match(/^\/([a-z]+)/);
-                if (sectionMatch) {
-                    const sectionFromUrl = sectionMatch[1];
-                    if (['publishers', 'authors', 'categories', 'series', 'languages', 'books', 'favorites'].includes(sectionFromUrl)) {
-                        currentSection = sectionFromUrl;
-                        const navItem = document.querySelector(`.nav-item[data-page="${sectionFromUrl}"]`);
-                        if (navItem) {
-                            document.querySelectorAll('.nav-item').forEach(navItem => {
-                                navItem.classList.remove('active');
-                            });
-                            navItem.classList.add('active');
-                            const typeNames = {
-                                'publishers': '出版',
-                                'authors': '作者',
-                                'categories': '分类',
-                                'series': '丛书',
-                                'languages': '语言',
-                                'books': '书籍',
-                                'favorites': '收藏'
-                            };
-                            document.querySelector('.page-title').textContent = typeNames[sectionFromUrl] || navItem.querySelector('span').textContent;
-                            if (['publishers', 'authors', 'categories', 'series', 'languages'].includes(sectionFromUrl)) {
-                                loadCategories(sectionFromUrl);
-                            } else {
-                                document.getElementById('category-list').style.display = 'none';
-                                document.getElementById('books-container').style.display = 'grid';
-                                document.getElementById('sort-buttons').style.display = sectionFromUrl === 'books' ? 'flex' : 'none';
-                                document.getElementById('books-container').innerHTML = '';
-                                if (sectionFromUrl === 'books') {
-                                    document.querySelectorAll('.sort-button').forEach(btn => {
-                                        btn.classList.remove('active');
-                                    });
-                                    document.querySelector('.sort-button[data-sort="date-desc"]').classList.add('active');
-                                    currentSort = 'date-desc';
-                                }
-                                if (sectionFromUrl === 'favorites') {
-                                    loadFavoriteBooks();
-                                } else {
-                                    loadBooks();
-                                }
-                            }
-                        }
-                    }
+                
+                // 更新页面标题
+                const typeNames = {
+                    'publishers': '出版',
+                    'authors': '作者',
+                    'categories': '分类',
+                    'series': '丛书',
+                    'languages': '语言',
+                    'books': '书籍',
+                    'favorites': '收藏'
+                };
+                document.querySelector('.page-title').textContent = typeNames[page];
+                
+                // 只有当URL需要更新时才调用pushState
+                if (window.location.pathname !== `/${page}`) {
+                    history.pushState(null, null, `/${page}`);
+                }
+                
+                // 根据页面类型显示不同内容
+                if (['publishers', 'authors', 'categories', 'series', 'languages'].includes(page)) {
+                    loadCategories(page);
+                } else if (page === 'books') {
+                    // 如果是books页面，默认激活date-desc排序按钮
+                    document.getElementById('sort-buttons').style.display = 'flex';
+                    document.querySelectorAll('.sort-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    document.querySelector('.sort-button[data-sort="date-desc"]').classList.add('active');
+                    currentSort = 'date-desc';
+                    loadBooks();
+                } else if (page === 'favorites') {
+                    // 如果是收藏页面，显示收藏的书籍
+                    loadFavoriteBooks();
                 } else {
-                    document.querySelector(`.nav-item[data-page="${currentSection}"]`).classList.add('active');
-                    document.querySelector(`.sort-button[data-sort="${currentSort}"]`).classList.add('active');
                     loadBooks();
                 }
             }
         }
-    }
-</script>
+
+        // 加载收藏的书籍
+        function loadFavoriteBooks() {
+            // 确保先清理内容窗口
+            clearContentWindow();
+            
+            // 强制重置状态
+            currentSection = 'favorites';
+            currentPage = 1;
+            hasMoreBooks = false; // 收藏页面不需要无限滚动
+            currentCategory = null;
+            currentCategoryType = null;
+            
+            // 确保URL是正确的
+            if (window.location.pathname !== '/favorites') {
+                history.replaceState(null, null, '/favorites');
+            }
+            
+            // 确保导航项高亮正确
+            document.querySelectorAll('.nav-item').forEach(navItem => {
+                navItem.classList.remove('active');
+            });
+            document.querySelector('.nav-item[data-page="favorites"]').classList.add('active');
+            
+            const container = document.getElementById('books-container');
+            
+            if (favoriteBooks.length === 0) {
+                container.innerHTML = '<div class="no-results">请在书籍信息页的右上角点击收藏</div>';
+                return;
+            }
+            
+            // 按添加时间倒序排列
+            const sortedBooks = [...favoriteBooks].sort((a, b) => {
+                return new Date(b.date_added) - new Date(a.date_added);
+            });
+            
+            // 渲染收藏的书籍
+            renderBooks(sortedBooks);
+        }
+
+        // 根据URL路径更新页面内容的函数
+        function handleUrlChange(urlPath) {
+            // 检查URL是否包含分类信息
+            const categoryMatch = urlPath.match(/^\/([a-z]+)\/([^\/]+)$/);
+            if (categoryMatch) {
+                const [, type, categoryName] = categoryMatch;
+                if (['publishers', 'authors', 'categories', 'series', 'languages'].includes(type)) {
+                    currentSection = type;
+                    const navItem = document.querySelector(`.nav-item[data-page="${type}"]`);
+                    if (navItem) {
+                        document.querySelectorAll('.nav-item').forEach(navItem => {
+                            navItem.classList.remove('active');
+                        });
+                        navItem.classList.add('active');
+                        
+                        // 如果是丛书，使用搜索API
+                        if (type === 'series') {
+                            const decodedName = decodeURIComponent(categoryName);
+                            fetch(`/api/series?search=${encodeURIComponent(decodedName)}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    const items = data.series;
+                                    // 查找完全匹配的系列
+                                    const category = items.find(item => 
+                                        item.name.toLowerCase() === decodedName
+                                    );
+                                    if (category) {
+                                        currentCategory = category;
+                                        currentCategoryType = type;
+                                        showCategoryBooks(category.id, type);
+                                    } else if (items.length > 0) {
+                                        // 如果没有完全匹配但有搜索结果，使用第一个
+                                        currentCategory = items[0];
+                                        currentCategoryType = type;
+                                        showCategoryBooks(items[0].id, type);
+                                    } else {
+                                        // 没有找到匹配的系列
+                                        document.getElementById('books-container').innerHTML = '<div class="no-results">没有找到匹配的丛书系列</div>';
+                                        document.getElementById('books-container').style.display = 'block';
+                                        document.getElementById('category-list').style.display = 'none';
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('搜索丛书时出错:', error);
+                                    document.getElementById('books-container').innerHTML = '<div class="error-message">搜索丛书时出错</div>';
+                                    document.getElementById('books-container').style.display = 'block';
+                                    document.getElementById('category-list').style.display = 'none';
+                                });
+                        } else {
+                            // 其他分类仍然使用原来的方式
+                            fetch(`/api/${type}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    const items = data[type];
+                                    const category = items.find(item => 
+                                        item.name.toLowerCase() === decodeURIComponent(categoryName)
+                                    );
+                                    if (category) {
+                                        currentCategory = category;
+                                        currentCategoryType = type;
+                                        showCategoryBooks(category.id, type);
+                                    }
+                                });
+                        }
+                    }
+                }
+            } else {
+                const bookMatch = urlPath.match(/\/book\/(\d+)/);
+                if (bookMatch) {
+                    const bookId = parseInt(bookMatch[1]);
+                    showBookDetail(bookId);
+                } else {
+                    const sectionMatch = urlPath.match(/^\/([a-z]+)/);
+                    if (sectionMatch) {
+                        const sectionFromUrl = sectionMatch[1];
+                        if (['publishers', 'authors', 'categories', 'series', 'languages', 'books', 'favorites'].includes(sectionFromUrl)) {
+                            currentSection = sectionFromUrl;
+                            const navItem = document.querySelector(`.nav-item[data-page="${sectionFromUrl}"]`);
+                            if (navItem) {
+                                document.querySelectorAll('.nav-item').forEach(navItem => {
+                                    navItem.classList.remove('active');
+                                });
+                                navItem.classList.add('active');
+                                const typeNames = {
+                                    'publishers': '出版',
+                                    'authors': '作者',
+                                    'categories': '分类',
+                                    'series': '丛书',
+                                    'languages': '语言',
+                                    'books': '书籍',
+                                    'favorites': '收藏'
+                                };
+                                document.querySelector('.page-title').textContent = typeNames[sectionFromUrl] || navItem.querySelector('span').textContent;
+                                if (['publishers', 'authors', 'categories', 'series', 'languages'].includes(sectionFromUrl)) {
+                                    loadCategories(sectionFromUrl);
+                                } else {
+                                    document.getElementById('category-list').style.display = 'none';
+                                    document.getElementById('books-container').style.display = 'grid';
+                                    document.getElementById('sort-buttons').style.display = sectionFromUrl === 'books' ? 'flex' : 'none';
+                                    document.getElementById('books-container').innerHTML = '';
+                                    if (sectionFromUrl === 'books') {
+                                        document.querySelectorAll('.sort-button').forEach(btn => {
+                                            btn.classList.remove('active');
+                                        });
+                                        document.querySelector('.sort-button[data-sort="date-desc"]').classList.add('active');
+                                        currentSort = 'date-desc';
+                                    }
+                                    if (sectionFromUrl === 'favorites') {
+                                        loadFavoriteBooks();
+                                    } else {
+                                        loadBooks();
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        document.querySelector(`.nav-item[data-page="${currentSection}"]`).classList.add('active');
+                        document.querySelector(`.sort-button[data-sort="${currentSort}"]`).classList.add('active');
+                        loadBooks();
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>

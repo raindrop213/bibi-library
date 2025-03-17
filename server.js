@@ -209,6 +209,7 @@ app.get('/api/books', (req, res) => {
     joins.push('JOIN books_series_link ON books.id = books_series_link.book');
     whereClause = whereClause ? `${whereClause} AND books_series_link.series = ?` : 'WHERE books_series_link.series = ?';
     queryParams.push(req.query.series);
+    orderBy = 'CAST(books.series_index AS REAL) DESC';
   }
   
   if (req.query.languages) {
@@ -233,7 +234,8 @@ app.get('/api/books', (req, res) => {
       books.pubdate, 
       books.timestamp, 
       books.path,
-      books.has_cover
+      books.has_cover,
+      books.series_index
     FROM books 
     ${joins.join(' ')}
     ${whereClause}
@@ -260,10 +262,6 @@ app.get('/api/books', (req, res) => {
         return res.status(500).json({ error: '获取书籍列表失败' });
       }
       
-      // 处理结果
-      const processedBooks = [];
-      let completedBooks = 0;
-      
       if (rows.length === 0) {
         // 如果没有书籍，直接返回空数组
         return res.json({
@@ -276,47 +274,71 @@ app.get('/api/books', (req, res) => {
         });
       }
       
-      // 为每本书获取真实作者名
-      rows.forEach(book => {
-        // 获取作者信息
-        const authorQuery = `
-          SELECT authors.name as author_name
-          FROM books_authors_link
-          JOIN authors ON books_authors_link.author = authors.id
-          WHERE books_authors_link.book = ?
-        `;
-        
-        db.all(authorQuery, [book.id], (err, authors) => {
-          // 构建封面URL
-          let cover_url = null;
-          if (book.has_cover) {
-            cover_url = `/api/books/${book.id}/cover`;
-          }
-          
-          const processedBook = {
+      // 优化：一次性获取所有书籍的作者，减少数据库查询次数
+      const bookIds = rows.map(book => book.id);
+      const allAuthorsQuery = `
+        SELECT 
+          books_authors_link.book as book_id,
+          authors.name as author_name
+        FROM books_authors_link
+        JOIN authors ON books_authors_link.author = authors.id
+        WHERE books_authors_link.book IN (${bookIds.map(() => '?').join(',')})
+      `;
+      
+      db.all(allAuthorsQuery, bookIds, (err, authorResults) => {
+        if (err) {
+          console.error('获取作者信息时出错:', err.message);
+          // 如果获取作者失败，仍然返回书籍信息，但没有作者
+          const processedBooks = rows.map(book => ({
             id: book.id,
             title: book.title,
-            author: err || !authors.length ? null : authors.map(a => a.author_name),
+            author: null,
             pubdate: book.pubdate,
             timestamp: book.timestamp,
             path: book.path,
-            cover_url: cover_url
-          };
+            cover_url: book.has_cover ? `/api/books/${book.id}/cover` : null,
+            series_index: book.series_index
+          }));
           
-          processedBooks.push(processedBook);
-          completedBooks++;
-          
-          // 当所有书籍都处理完毕时，返回结果
-          if (completedBooks === rows.length) {
-            res.json({
-              books: processedBooks,
-              page,
-              limit,
-              total,
-              totalPages,
-              hasMore: page < totalPages
-            });
+          return res.json({
+            books: processedBooks,
+            page,
+            limit,
+            total,
+            totalPages,
+            hasMore: page < totalPages
+          });
+        }
+        
+        // 将作者按书籍ID分组
+        const authorsMap = {};
+        authorResults.forEach(result => {
+          if (!authorsMap[result.book_id]) {
+            authorsMap[result.book_id] = [];
           }
+          authorsMap[result.book_id].push(result.author_name);
+        });
+        
+        // 处理书籍列表
+        const processedBooks = rows.map(book => ({
+          id: book.id,
+          title: book.title,
+          author: authorsMap[book.id] || null,
+          pubdate: book.pubdate,
+          timestamp: book.timestamp,
+          path: book.path,
+          cover_url: book.has_cover ? `/api/books/${book.id}/cover` : null,
+          series_index: book.series_index
+        }));
+        
+        // 返回结果
+        res.json({
+          books: processedBooks,
+          page,
+          limit,
+          total,
+          totalPages,
+          hasMore: page < totalPages
         });
       });
     });
@@ -763,26 +785,37 @@ app.get('/api/series', (req, res) => {
     WITH SeriesFirstBook AS (
       SELECT 
         series.id as series_id,
-        MIN(books.id) as first_book_id
+        MIN(books.id) as first_book_id,
+        MAX(books.timestamp) as last_added_timestamp,
+        MIN(CAST(books.series_index AS REAL)) as min_series_index
       FROM series
       JOIN books_series_link ON series.id = books_series_link.series
       JOIN books ON books_series_link.book = books.id
       GROUP BY series.id
+    ),
+    SeriesBookCount AS (
+      SELECT
+        series.id as series_id,
+        COUNT(DISTINCT books_series_link.book) as book_count
+      FROM series
+      LEFT JOIN books_series_link ON series.id = books_series_link.series
+      GROUP BY series.id
     )
     SELECT 
       series.id, 
-      series.name, 
-      COUNT(books_series_link.book) as book_count,
+      series.name,
+      SeriesBookCount.book_count,
       books.has_cover,
       books.path,
-      books.id as cover_book_id
+      books.id as cover_book_id,
+      SeriesFirstBook.last_added_timestamp as timestamp,
+      SeriesFirstBook.min_series_index
     FROM series
-    LEFT JOIN books_series_link ON series.id = books_series_link.series
+    LEFT JOIN SeriesBookCount ON series.id = SeriesBookCount.series_id
     LEFT JOIN SeriesFirstBook ON series.id = SeriesFirstBook.series_id
     LEFT JOIN books ON SeriesFirstBook.first_book_id = books.id
     ${whereClause}
-    GROUP BY series.id
-    ORDER BY series.name COLLATE NOCASE
+    ORDER BY SeriesFirstBook.last_added_timestamp DESC
     LIMIT ? OFFSET ?
   `;
   
@@ -817,7 +850,8 @@ app.get('/api/series', (req, res) => {
       return {
         id: row.id,
         name: row.name,
-        book_count: row.book_count,
+        book_count: row.book_count || 0,
+        min_series_index: row.min_series_index,
         cover_url: cover_url
       };
     });
