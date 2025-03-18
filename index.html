@@ -520,17 +520,17 @@
             if (!author) return '';
             // 如果作者是数组，处理多个作者
             if (Array.isArray(author)) {
-                return author.map(a => `<a href="/authors/${encodeURIComponent(a.toLowerCase())}">${a}</a>`).join('；');
+                return author.map(a => `<a href="/authors/${encodeURIComponent(a)}">${a}</a>`).join('；');
             }
             // 单个作者
-            return `<a href="/authors/${encodeURIComponent(author.toLowerCase())}">${author}</a>`;
+            return `<a href="/authors/${encodeURIComponent(author)}">${author}</a>`;
         }
         
         // 格式化标签链接
         function formatTagLinks(tags) {
             if (!tags || tags.length === 0) return '无';
             return tags.map(tag => 
-                `<span class="tag" onclick="window.location.href='/categories/${encodeURIComponent(tag.toLowerCase())}'">
+                `<span class="tag" onclick="window.location.href='/categories/${encodeURIComponent(tag)}'">
                     ${tag}
                 </span>`
             ).join(' ');
@@ -611,10 +611,10 @@
                         if (!authors) return '';
                         // 如果作者是数组，处理多个作者
                         if (Array.isArray(authors)) {
-                            return authors.map(a => `<a href="/authors/${encodeURIComponent(a.toLowerCase())}">${a}</a>`).join('；');
+                            return authors.map(a => `<a href="/authors/${encodeURIComponent(a)}">${a}</a>`).join('；');
                         }
                         // 单个作者
-                        return `<a href="/authors/${encodeURIComponent(authors.toLowerCase())}">${authors}</a>`;
+                        return `<a href="/authors/${encodeURIComponent(authors)}">${authors}</a>`;
                     }
                     
                     // 构建HTML
@@ -635,7 +635,7 @@
                                     <div class="meta-item">
                                         <span class="meta-label">系列</span>
                                         <span class="meta-value">
-                                            <a href="/series/${encodeURIComponent(book.series.toLowerCase())}">${book.series}</a>
+                                            <a href="/series/${encodeURIComponent(book.series)}">${book.series}</a>
                                             ${book.series_index ? ` ${formatSeriesIndex(book.series_index)}` : ''}
                                         </span>
                                     </div>
@@ -644,7 +644,7 @@
                                     <div class="meta-item">
                                         <span class="meta-label">出版商</span>
                                         <span class="meta-value">
-                                            <a href="/publishers/${encodeURIComponent(book.publisher.toLowerCase())}">${book.publisher}</a>
+                                            <a href="/publishers/${encodeURIComponent(book.publisher)}">${book.publisher}</a>
                                         </span>
                                     </div>
                                     ` : ''}
@@ -885,7 +885,7 @@
             `;
             
             // 更新 URL
-            history.pushState(null, null, `/${type}/${encodeURIComponent(categoryName.toLowerCase())}`);
+            history.pushState(null, null, `/${type}/${encodeURIComponent(categoryName)}`);
             
             // 重置分页并加载书籍
             currentPage = 1;
