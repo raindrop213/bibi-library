@@ -1083,35 +1083,62 @@
                         document.querySelector('.page-title').textContent = typeNames[type];
                         
                         // 先加载分类列表
-                        fetchWithPassword(`/api/${type}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                const items = data[type];
-                                console.log(`获取到${type}列表:`, items.length, '项');
-                                
-                                // 不区分大小写查找匹配项
-                                const decodedName = decodeURIComponent(categoryName).toLowerCase();
-                                const category = items.find(item => 
-                                    item.name.toLowerCase() === decodedName
-                                );
-                                
-                                if (category) {
-                                    console.log('找到匹配的分类:', category);
+                        if (type === 'series') {
+                            // 对于系列，使用专门的API直接通过名称查找
+                            fetchWithPassword(`/api/series?name=${categoryName}`)
+                                .then(response => {
+                                    if (!response.ok) {
+                                        if (response.status === 404) {
+                                            throw new Error('未找到系列');
+                                        }
+                                        throw new Error('获取系列信息失败');
+                                    }
+                                    return response.json();
+                                })
+                                .then(category => {
+                                    console.log('找到匹配的系列:', category);
                                     currentCategory = category;
                                     currentCategoryType = type;
                                     showCategoryBooks(category.id, type);
-                                } else {
-                                    console.log('未找到匹配的分类');
+                                })
+                                .catch(error => {
+                                    console.error(`通过名称查找系列时出错:`, error);
                                     // 没有找到匹配项，显示完整列表
                                     document.getElementById('category-list').innerHTML = '';
                                     loadCategories(type);
-                                }
-                            })
-                            .catch(error => {
-                                console.error(`加载${type}列表时出错:`, error);
-                                document.getElementById('category-list').innerHTML = 
-                                    `<div class="error-message">加载${typeNames[type]}列表时出错</div>`;
-                            });
+                                });
+                        } else {
+                            // 对于其他分类类型，使用原有的方法
+                            fetchWithPassword(`/api/${type}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    const items = data[type];
+                                    console.log(`获取到${type}列表:`, items.length, '项');
+                                    
+                                    // 不区分大小写查找匹配项
+                                    const decodedName = decodeURIComponent(categoryName).toLowerCase();
+                                    const category = items.find(item => 
+                                        item.name.toLowerCase() === decodedName
+                                    );
+                                    
+                                    if (category) {
+                                        console.log('找到匹配的分类:', category);
+                                        currentCategory = category;
+                                        currentCategoryType = type;
+                                        showCategoryBooks(category.id, type);
+                                    } else {
+                                        console.log('未找到匹配的分类');
+                                        // 没有找到匹配项，显示完整列表
+                                        document.getElementById('category-list').innerHTML = '';
+                                        loadCategories(type);
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error(`加载${type}列表时出错:`, error);
+                                    document.getElementById('category-list').innerHTML = 
+                                        `<div class="error-message">加载${typeNames[type]}列表时出错</div>`;
+                                });
+                        }
                     }
                 }
             } else {

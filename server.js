@@ -822,16 +822,10 @@ app.get('/api/series', (req, res) => {
   const limit = config.pagination.seriesPageSize;
   const offset = (page - 1) * limit;
   const search = req.query.search || '';
+  const seriesName = req.query.name || '';
   
-  let whereClause = '';
-  let queryParams = [];
-  
-  if (search) {
-    whereClause = 'WHERE series.name LIKE ?';
-    queryParams.push(`%${search}%`);
-  }
-  
-  const query = `
+  // 构建通用的WITH子句
+  const withClause = `
     WITH SeriesFirstBook AS (
       SELECT 
         series.id as series_id,
@@ -854,6 +848,26 @@ app.get('/api/series', (req, res) => {
       ${buildTagFilterCondition(req.hasAccess)}
       GROUP BY series.id
     )
+  `;
+  
+  // 构建查询条件
+  let whereClause = '';
+  let queryParams = [];
+  let needsPagination = true;
+  
+  if (seriesName) {
+    // 精确查找特定名称的系列
+    whereClause = 'WHERE LOWER(series.name) = LOWER(?)';
+    queryParams.push(seriesName);
+    needsPagination = false; // 精确查询不需要分页
+  } else if (search) {
+    // 模糊搜索系列名称
+    whereClause = 'WHERE series.name LIKE ?';
+    queryParams.push(`%${search}%`);
+  }
+  
+  // 构建查询
+  const selectClause = `
     SELECT 
       series.id, 
       series.name,
@@ -868,33 +882,61 @@ app.get('/api/series', (req, res) => {
     LEFT JOIN SeriesFirstBook ON series.id = SeriesFirstBook.series_id
     LEFT JOIN books ON SeriesFirstBook.first_book_id = books.id
     ${whereClause}
-    ORDER BY SeriesFirstBook.last_added_timestamp DESC
-    LIMIT ? OFFSET ?
   `;
   
-  // 获取总数
-  const countQuery = `
-    SELECT COUNT(*) as total FROM series ${whereClause}
+  // 排序和分页（仅在不是精确查询时应用）
+  const orderAndLimit = needsPagination ? 
+    'ORDER BY SeriesFirstBook.last_added_timestamp DESC LIMIT ? OFFSET ?' : '';
+  
+  // 完整的查询
+  const query = `
+    ${withClause}
+    ${selectClause}
+    ${orderAndLimit}
   `;
   
-  // 执行查询
-  Promise.all([
-    new Promise((resolve, reject) => {
-      db.get(countQuery, queryParams, (err, row) => {
-        if (err) reject(err);
-        else resolve(row.total);
+  // 获取总数（仅在需要分页时执行）
+  const getResults = () => {
+    if (needsPagination) {
+      const finalParams = [...queryParams, limit, offset];
+      
+      // 并行获取总数和结果
+      Promise.all([
+        new Promise((resolve, reject) => {
+          const countQuery = `
+            SELECT COUNT(*) as total 
+            FROM series 
+            ${whereClause}
+          `;
+          db.get(countQuery, queryParams, (err, row) => {
+            if (err) reject(err);
+            else resolve(row ? row.total : 0);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.all(query, finalParams, (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+          });
+        })
+      ])
+      .then(([total, rows]) => {
+        processResults(rows, total, true);
+      })
+      .catch(handleError);
+    } else {
+      // 精确查询，直接执行不需要计算总数
+      db.all(query, queryParams, (err, rows) => {
+        if (err) handleError(err);
+        else processResults(rows, rows.length, false);
       });
-    }),
-    new Promise((resolve, reject) => {
-      db.all(query, [...queryParams, limit, offset], (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    })
-  ])
-  .then(([total, rows]) => {
+    }
+  };
+  
+  // 处理查询结果
+  const processResults = (rows, total, isPaginated) => {
     // 处理结果，添加封面URL
-    const series = rows.map(row => {
+    const seriesItems = rows.map(row => {
       let cover_url = null;
       if (row.has_cover) {
         cover_url = `/api/books/${row.cover_book_id}/cover`;
@@ -909,19 +951,36 @@ app.get('/api/series', (req, res) => {
       };
     });
     
-    res.json({ 
-      series,
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-      hasMore: offset + limit < total
-    });
-  })
-  .catch(err => {
-    console.error('获取丛书列表时出错:', err.message);
-    return res.status(500).json({ error: '获取丛书列表失败' });
-  });
+    // 精确的name查询只返回一个结果
+    if (seriesName && seriesItems.length > 0) {
+      res.json(seriesItems[0]);
+    } else if (isPaginated) {
+      // 分页列表结果
+      res.json({ 
+        series: seriesItems,
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: offset + limit < total
+      });
+    } else if (seriesItems.length === 0) {
+      // 未找到结果
+      res.status(404).json({ error: '未找到系列' });
+    } else {
+      // 其他情况（单个非name查询结果）
+      res.json({ series: seriesItems });
+    }
+  };
+  
+  // 错误处理
+  const handleError = (err) => {
+    console.error('查询系列时出错:', err.message);
+    return res.status(500).json({ error: '查询系列失败' });
+  };
+  
+  // 执行查询
+  getResults();
 });
 
 // 获取语言列表
