@@ -1066,55 +1066,52 @@
                         });
                         navItem.classList.add('active');
                         
-                        // 如果是丛书，使用搜索API
-                        if (type === 'series') {
-                            const decodedName = decodeURIComponent(categoryName);
-                            fetch(`/api/series?search=${encodeURIComponent(decodedName)}`)
-                                .then(response => response.json())
-                                .then(data => {
-                                    const items = data.series;
-                                    // 查找完全匹配的系列
-                                    const category = items.find(item => 
-                                        item.name.toLowerCase() === decodedName
-                                    );
-                                    if (category) {
-                                        currentCategory = category;
-                                        currentCategoryType = type;
-                                        showCategoryBooks(category.id, type);
-                                    } else if (items.length > 0) {
-                                        // 如果没有完全匹配但有搜索结果，使用第一个
-                                        currentCategory = items[0];
-                                        currentCategoryType = type;
-                                        showCategoryBooks(items[0].id, type);
-                                    } else {
-                                        // 没有找到匹配的系列
-                                        document.getElementById('books-container').innerHTML = '<div class="no-results">没有找到匹配的丛书系列</div>';
-                                        document.getElementById('books-container').style.display = 'block';
-                                        document.getElementById('category-list').style.display = 'none';
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error('搜索丛书时出错:', error);
-                                    document.getElementById('books-container').innerHTML = '<div class="error-message">搜索丛书时出错</div>';
-                                    document.getElementById('books-container').style.display = 'block';
-                                    document.getElementById('category-list').style.display = 'none';
-                                });
-                        } else {
-                            // 其他分类仍然使用原来的方式
-                            fetch(`/api/${type}`)
-                                .then(response => response.json())
-                                .then(data => {
-                                    const items = data[type];
-                                    const category = items.find(item => 
-                                        item.name.toLowerCase() === decodeURIComponent(categoryName)
-                                    );
-                                    if (category) {
-                                        currentCategory = category;
-                                        currentCategoryType = type;
-                                        showCategoryBooks(category.id, type);
-                                    }
-                                });
-                        }
+                        // 先显示列表加载状态
+                        document.getElementById('category-list').style.display = 'grid';
+                        document.getElementById('books-container').style.display = 'none';
+                        document.getElementById('sort-buttons').style.display = 'none';
+                        document.getElementById('category-list').innerHTML = '<div class="loading">加载中...</div>';
+                        
+                        // 记录页面标题
+                        const typeNames = {
+                            'publishers': '出版',
+                            'authors': '作者',
+                            'categories': '分类',
+                            'series': '丛书',
+                            'languages': '语言'
+                        };
+                        document.querySelector('.page-title').textContent = typeNames[type];
+                        
+                        // 先加载分类列表
+                        fetchWithPassword(`/api/${type}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                const items = data[type];
+                                console.log(`获取到${type}列表:`, items.length, '项');
+                                
+                                // 不区分大小写查找匹配项
+                                const decodedName = decodeURIComponent(categoryName).toLowerCase();
+                                const category = items.find(item => 
+                                    item.name.toLowerCase() === decodedName
+                                );
+                                
+                                if (category) {
+                                    console.log('找到匹配的分类:', category);
+                                    currentCategory = category;
+                                    currentCategoryType = type;
+                                    showCategoryBooks(category.id, type);
+                                } else {
+                                    console.log('未找到匹配的分类');
+                                    // 没有找到匹配项，显示完整列表
+                                    document.getElementById('category-list').innerHTML = '';
+                                    loadCategories(type);
+                                }
+                            })
+                            .catch(error => {
+                                console.error(`加载${type}列表时出错:`, error);
+                                document.getElementById('category-list').innerHTML = 
+                                    `<div class="error-message">加载${typeNames[type]}列表时出错</div>`;
+                            });
                     }
                 }
             } else {
