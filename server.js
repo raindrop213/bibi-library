@@ -10,6 +10,48 @@ const app = express();
 const config = require('./config');
 const PORT = config.port || 4545;
 
+// 从配置中获取标签过滤设置
+const EXCLUDED_TAGS = config.tagFilter?.excludedTags || ['ECHI'];
+const ACCESS_PASSWORD = config.tagFilter?.accessPassword || 'rd2b';
+
+// 构建标签过滤条件
+function buildTagFilterCondition(hasAccess) {
+  if (hasAccess) return ''; // 如果有权限，不进行过滤
+  
+  // 如果只有一个排除标签
+  if (EXCLUDED_TAGS.length === 1) {
+    return `
+      AND NOT EXISTS (
+        SELECT 1 FROM books_tags_link btl 
+        JOIN tags t ON btl.tag = t.id 
+        WHERE btl.book = books.id 
+        AND t.name = '${EXCLUDED_TAGS[0]}'
+      )
+    `;
+  }
+  
+  // 如果有多个排除标签
+  return `
+    AND NOT EXISTS (
+      SELECT 1 FROM books_tags_link btl 
+      JOIN tags t ON btl.tag = t.id 
+      WHERE btl.book = books.id 
+      AND t.name IN (${EXCLUDED_TAGS.map(tag => `'${tag}'`).join(',')})
+    )
+  `;
+}
+
+// 验证密码中间件
+function validatePassword(req, res, next) {
+  const password = req.headers['x-access-password'];
+  const hasAccess = password === ACCESS_PASSWORD;
+  req.hasAccess = hasAccess;
+  next();
+}
+
+// 在所有API路由之前添加密码验证中间件
+app.use('/api', validatePassword);
+
 // 更新bibi配置函数
 function updateBibiConfig() {
   const bibiConfigPath = path.join(__dirname, 'bibi', 'presets', 'default.js');
@@ -176,7 +218,7 @@ app.get('/api/books', (req, res) => {
       orderBy = 'books.timestamp DESC';
   }
   
-  // 构建查询条件
+  // 修改whereClause，添加标签过滤
   let whereClause = '';
   let queryParams = [];
   let joins = [];
@@ -185,6 +227,9 @@ app.get('/api/books', (req, res) => {
     whereClause = `WHERE (books.title LIKE ? OR books.author_sort LIKE ?)`;
     queryParams = [search, search].map(param => `%${param}%`);
   }
+  
+  // 添加标签过滤条件
+  whereClause = whereClause ? `${whereClause} ${buildTagFilterCondition(req.hasAccess)}` : `WHERE 1=1 ${buildTagFilterCondition(req.hasAccess)}`;
   
   // 添加分类过滤
   if (req.query.publishers) {
@@ -706,6 +751,8 @@ app.get('/api/authors', (req, res) => {
       COUNT(books_authors_link.book) as book_count
     FROM authors
     LEFT JOIN books_authors_link ON authors.id = books_authors_link.author
+    LEFT JOIN books ON books_authors_link.book = books.id
+    ${buildTagFilterCondition(req.hasAccess)}
     GROUP BY authors.id
     ORDER BY authors.sort COLLATE NOCASE
   `;
@@ -729,6 +776,8 @@ app.get('/api/publishers', (req, res) => {
       COUNT(books_publishers_link.book) as book_count
     FROM publishers
     LEFT JOIN books_publishers_link ON publishers.id = books_publishers_link.publisher
+    LEFT JOIN books ON books_publishers_link.book = books.id
+    ${buildTagFilterCondition(req.hasAccess)}
     GROUP BY publishers.id
     ORDER BY publishers.name COLLATE NOCASE
   `;
@@ -752,6 +801,7 @@ app.get('/api/categories', (req, res) => {
       COUNT(books_tags_link.book) as book_count
     FROM tags
     LEFT JOIN books_tags_link ON tags.id = books_tags_link.tag
+    ${req.hasAccess ? '' : `WHERE tags.name NOT IN (${EXCLUDED_TAGS.map(tag => `'${tag}'`).join(',')})`}
     GROUP BY tags.id
     ORDER BY tags.name COLLATE NOCASE
   `;
@@ -791,6 +841,7 @@ app.get('/api/series', (req, res) => {
       FROM series
       JOIN books_series_link ON series.id = books_series_link.series
       JOIN books ON books_series_link.book = books.id
+      ${buildTagFilterCondition(req.hasAccess)}
       GROUP BY series.id
     ),
     SeriesBookCount AS (
@@ -799,6 +850,8 @@ app.get('/api/series', (req, res) => {
         COUNT(DISTINCT books_series_link.book) as book_count
       FROM series
       LEFT JOIN books_series_link ON series.id = books_series_link.series
+      LEFT JOIN books ON books_series_link.book = books.id
+      ${buildTagFilterCondition(req.hasAccess)}
       GROUP BY series.id
     )
     SELECT 
@@ -880,6 +933,8 @@ app.get('/api/languages', (req, res) => {
       COUNT(books_languages_link.book) as book_count
     FROM languages
     LEFT JOIN books_languages_link ON languages.id = books_languages_link.lang_code
+    LEFT JOIN books ON books_languages_link.book = books.id
+    ${buildTagFilterCondition(req.hasAccess)}
     GROUP BY languages.id
     ORDER BY languages.lang_code
   `;

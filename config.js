@@ -10,6 +10,14 @@ module.exports = {
   // 是否启用CORS
   enableCors: true,
   
+  // 标签过滤设置
+  tagFilter: {
+    // 需要过滤的标签列表
+    excludedTags: ['ECHI'],
+    // 访问密码（设置为null表示不需要密码）
+    accessPassword: 'nsfw'
+  },
+  
   // 缩略图清理设置
   thumbnails: {
     // 清理间隔（天）

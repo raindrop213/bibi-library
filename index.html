@@ -170,7 +170,14 @@
                         <li>WEB阅读器 <a href="https://reader.ttsu.app" target="_blank">ッツ</a> 和 <a href="/bibi/?book=" target="_blank">BiBi</a> 可以读取本地的EPUB电子书</li>
                         <li>界面设计来源于calibre-web中的黑暗模式</li>
                     </ul>
-                    <div class="update-date">Update: 2025.03.17</div>
+                    <div class="password-section">
+                        <div class="password-input-group">
+                            <input type="password" id="access-password" placeholder="输入访问码可开放更多书籍...">
+                            <button onclick="submitPassword()">SAVE</button>
+                        </div>
+                        <div id="password-status" class="password-status"></div>
+                    </div>
+                    <div class="update-date">updata: 2025.03.18</div>
                 </div>
             </div>
         </div>
@@ -196,6 +203,9 @@
         
         // 收藏书籍数组
         let favoriteBooks = JSON.parse(localStorage.getItem('favoriteBooks')) || [];
+        
+        // 添加密码相关变量和函数
+        let accessPassword = localStorage.getItem('accessPassword') || '';
         
         // 显示关于弹窗
         function showAboutModal() {
@@ -425,8 +435,8 @@
                 }
             }
             
-            // 发送API请求
-            fetch(apiUrl)
+            // 使用新的fetchWithPassword函数
+            fetchWithPassword(apiUrl)
                 .then(response => response.json())
                 .then(data => {
                     isLoading = false;
@@ -536,7 +546,7 @@
             document.querySelector('.content').classList.add('modal-open');
             
             // 加载书籍详情
-            fetch(`/api/books/${bookId}`)
+            fetchWithPassword(`/api/books/${bookId}`)
                 .then(response => response.json())
                 .then(book => {
                     // 设置弹窗标题
@@ -770,7 +780,7 @@
             // 构建API URL
             const apiUrl = `/api/${type}${type === 'series' ? `?page=${page}` : ''}`;
             
-            fetch(apiUrl)
+            fetchWithPassword(apiUrl)
                 .then(response => response.json())
                 .then(data => {
                     isLoadingCategories = false;
@@ -1163,6 +1173,53 @@
                     }
                 }
             }
+        }
+
+        // 提交密码
+        function submitPassword() {
+            const passwordInput = document.getElementById('access-password');
+            const passwordStatus = document.getElementById('password-status');
+            const newPassword = passwordInput.value.trim();
+            
+            // 保存密码到本地存储
+            localStorage.setItem('accessPassword', newPassword);
+            accessPassword = newPassword;
+            
+            // 显示状态
+            passwordStatus.textContent = '访问码已保存 √';
+            passwordStatus.className = 'password-status success';
+            
+            // 清空输入框
+            passwordInput.value = '';
+            
+            setTimeout(() => {
+                passwordStatus.textContent = '';
+                passwordStatus.className = 'password-status';
+            }, 1500);
+            
+            // 刷新当前页面内容
+            if (currentSection === 'books') {
+                currentPage = 1;
+                hasMoreBooks = true;
+                document.getElementById('books-container').innerHTML = '';
+                loadBooks();
+            } else if (['publishers', 'authors', 'categories', 'series', 'languages'].includes(currentSection)) {
+                loadCategories(currentSection);
+            }
+        }
+
+        // 修改所有API请求，添加密码头
+        function addPasswordHeader(headers = {}) {
+            if (accessPassword) {
+                headers['X-Access-Password'] = accessPassword;
+            }
+            return headers;
+        }
+
+        // 修改fetch调用，添加密码头
+        function fetchWithPassword(url, options = {}) {
+            options.headers = addPasswordHeader(options.headers || {});
+            return fetch(url, options);
         }
     </script>
 </body>

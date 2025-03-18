@@ -614,6 +614,7 @@ body {
 
 .modal-action-button:hover {
     background-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
 .modal-action-button.read-button:hover {
@@ -1021,8 +1022,57 @@ body {
 
 .update-date {
     position: absolute;
-    bottom: 15px;
-    right: 15px;
+    bottom: 20px;
+    right: 30px;
     font-size: 0.6rem;
     color: #818181;
+}
+
+/* 添加密码输入相关样式 */
+.password-section {
+    border-top: 1px solid #444;
+    margin-bottom: 10px;
+}
+
+.password-input-group {
+    display: flex;
+    margin-top: 7px;
+}
+
+.password-input-group input {
+    flex: 1;
+    padding: 0 12px;
+    border: transparent;
+    border-radius: 0px 0 0 4px;
+    background: var(--color-background-2);
+    color: var(--color-text-1);
+    height: 30px;
+    font-size: .7rem;
+}
+
+.password-input-group button {
+    padding: 0 12px;
+    border: none;
+    border-radius: 0 0px 4px 0;
+    background: var(--color-background-3);
+    color: var(--color-text-1);
+    cursor: pointer;
+    height: 30px;
+    font-size: .7rem;
+}
+
+.password-input-group button:hover {
+    background: var(--color-background-1);
+}
+
+.password-status {
+    margin: 5px;
+    font-size: .7rem;
+}
+
+.password-status.success {
+    position: absolute;
+    bottom: 10px;
+    left: 30px;
+    color: #4CAF50;
 }
