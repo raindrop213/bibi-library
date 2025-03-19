@@ -891,7 +891,7 @@ body {
 
 .meta-item {
     font-size: 0.8rem;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     display: flex;
 }
 
@@ -904,13 +904,13 @@ body {
     color: var(--color-text-1);
 }
 
+/* 标签样式 */
 .tag {
     display: inline-block;
-    background-color: var(--color-primary);
-    color: white;
-    padding: 3px 8px;
+    background-color: var(--color-background-1);
+    color: var(--color-text-1);
+    padding:  0 8px 4px 8px;
     border-radius: 4px;
-    margin-right: 5px;
     font-size: 0.8rem;
     cursor: pointer;
     transition: background-color 0.2s;
@@ -918,6 +918,43 @@ body {
 
 .tag:hover {
     background-color: var(--color-tertiary);
+}
+
+/* 不同类型标识符的颜色 */
+.identifier {
+    display: inline-block;
+    border-width: 1px;
+    border-style: solid;
+    padding:  0 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.identifier:hover {
+    border-color: white;
+    color: white;
+}
+
+.isbn  {
+    border-color: #5591e5;
+    color: #5591e5;
+}
+
+.google  {
+    border-color: #5fab5f;
+    color: #5fab5f;
+}
+
+.amazon , .asin, .mobi-asin, .amazon_jp {
+    border-color: #d79634;
+    color: #d79634;
+}
+
+.other {
+    border-color: #868686;
+    color: #868686;
 }
 
 .detail-description {

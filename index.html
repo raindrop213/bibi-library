@@ -542,6 +542,57 @@
             ).join(' ');
         }
         
+        // 格式化标识符信息
+        function formatIdentifiers(identifiers) {
+            if (!identifiers || Object.keys(identifiers).length === 0) return '无';
+            
+            // 标识符类型的友好显示名称
+            const idTypeNames = {
+                'isbn': 'ISBN',
+                'google': 'Google',
+                'mobi-asin': 'MOBI',
+                'amazon': 'Amazon',
+                'amazon_jp': 'Amazon'
+            };
+            
+            // 为不同类型的标识符生成不同的链接
+            const createIdentifierTag = (type, value) => {
+                const className = `identifier ${type.toLowerCase()}`;
+                
+                // 根据不同类型生成不同的链接URL
+                let url = '';
+                switch(type) {
+                    case 'isbn':
+                        url = `https://www.worldcat.org/isbn/${encodeURIComponent(value)}`;
+                        break;
+                    case 'google':
+                        url = `https://books.google.com/books?id=${encodeURIComponent(value)}`;
+                        break;
+                    case 'amazon':
+                        url = `https://www.amazon.co.jp/dp/${encodeURIComponent(value)}`;
+                        break;
+                    case 'mobi-asin':
+                        url = `https://www.amazon.co.jp/dp/${encodeURIComponent(value)}`;
+                        break;
+                    case 'amazon_jp':
+                        url = `https://www.amazon.co.jp/dp/${encodeURIComponent(value)}`;
+                        break;
+                    default:
+                        url = '#';
+                        break;
+                }
+                
+                const displayName = idTypeNames[type] || type;
+                // return `<a href="${url}" class="${className}" target="_blank">${displayName}</a>`;
+                return `<span class="${className}" onclick="window.open('${url}', '_blank')">${displayName}</span>`;
+            };
+            
+            // 生成所有标识符标签
+            return Object.entries(identifiers).map(([type, value]) => {
+                return createIdentifierTag(type, value);
+            }).join(' ');
+        }
+        
         // 显示书籍详情
         function showBookDetail(bookId) {
             // 显示弹窗
@@ -658,6 +709,12 @@
                                         <span class="meta-label">出版日</span>
                                         <span class="meta-value">${formatDate(book.pubdate)}</span>
                                     </div>
+                                    ${book.identifiers && Object.keys(book.identifiers).length > 0 ? `
+                                    <div class="meta-item">
+                                        <span class="meta-label">标识符</span>
+                                        <span class="meta-value">${formatIdentifiers(book.identifiers)}</span>
+                                    </div>
+                                    ` : ''}
                                     <div class="meta-item">
                                         <span class="meta-label">标签</span>
                                         <span class="meta-value">${formatTagLinks(book.tags)}</span>

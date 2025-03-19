@@ -459,10 +459,18 @@ app.get('/api/books/:id', (req, res) => {
       WHERE books_series_link.book = ?
     `;
     
+    // 获取所有标识符
+    const identifiersQuery = `
+      SELECT type, val
+      FROM identifiers
+      WHERE book = ?
+    `;
+    
     console.log('执行标签查询:', tagsQuery);
     console.log('执行出版商查询:', publisherQuery);
     console.log('执行作者查询:', authorQuery);
     console.log('执行系列查询:', seriesQuery);
+    console.log('执行标识符查询:', identifiersQuery);
     
     // 并行执行查询
     Promise.all([
@@ -509,13 +517,32 @@ app.get('/api/books/:id', (req, res) => {
             resolve(series);
           }
         });
+      }),
+      new Promise((resolve, reject) => {
+        db.all(identifiersQuery, [bookId], (err, identifiers) => {
+          if (err) {
+            console.error('获取标识符时出错:', err);
+            reject(err);
+          } else {
+            console.log('获取到的标识符:', identifiers);
+            resolve(identifiers);
+          }
+        });
       })
     ])
-    .then(([tags, publisher, authors, series]) => {
+    .then(([tags, publisher, authors, series, identifiers]) => {
       // 构建封面URL
       let cover_url = null;
       if (book.has_cover) {
         cover_url = `/api/books/${book.id}/cover`;
+      }
+      
+      // 将标识符转换为对象格式
+      const identifiersObj = {};
+      if (identifiers && identifiers.length > 0) {
+        identifiers.forEach(item => {
+          identifiersObj[item.type] = item.val;
+        });
       }
       
       // 获取书籍目录中的所有文件
@@ -544,6 +571,7 @@ app.get('/api/books/:id', (req, res) => {
           cover_url: cover_url,
           tags: tags.map(tag => tag.name),
           series: series ? series.series_name : null,
+          identifiers: identifiersObj,
           epub_url: `/api/books/${book.id}/epub`,
           epub_file: epubFile || null
         };
@@ -737,6 +765,45 @@ app.get('/api/books/:id/epub-path', (req, res) => {
         epub_file: epubFile,
         full_path: fullPath
       });
+    });
+  });
+});
+
+// 获取书籍的所有标识符
+app.get('/api/books/:id/identifiers', (req, res) => {
+  const bookId = req.params.id;
+  
+  // 获取所有标识符信息
+  const identifiersQuery = `
+    SELECT type, val
+    FROM identifiers
+    WHERE book = ?
+  `;
+  
+  db.all(identifiersQuery, [bookId], (err, results) => {
+    if (err) {
+      console.error('获取标识符时出错:', err.message);
+      return res.status(500).json({ error: '获取标识符失败' });
+    }
+    
+    if (!results || results.length === 0) {
+      return res.status(404).json({ 
+        error: '未找到标识符',
+        book_id: bookId,
+        identifiers: {}
+      });
+    }
+    
+    // 将结果转换为对象格式，使标识符类型作为键
+    const identifiersObj = {};
+    results.forEach(item => {
+      identifiersObj[item.type] = item.val;
+    });
+    
+    // 返回标识符信息
+    res.json({
+      book_id: bookId,
+      identifiers: identifiersObj
     });
   });
 });
