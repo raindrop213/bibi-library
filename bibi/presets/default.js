@@ -30,7 +30,7 @@ Bibi.preset({
 "use-menubar"                : "yes", // "yes" or "no" or "desktop" or "mobile"
 "use-full-height"            : "yes", // "yes" or "no" or "desktop" or "mobile". If "use-menubar" is interpreted as "no", "use-full-height" is always treated as "yes".
 
-"use-arrows"                 : "yes", // "yes" or "no" or "desktop" or "mobile"
+"use-arrows"                 : "no", // "yes" or "no" or "desktop" or "mobile"
 "flipper-width"              : 0.25, // Number of ratio (less than 1) or pixel (1 or greater)
 
 "use-keys"                   : "yes", // "yes" or "no" or "desktop" or "mobile"
@@ -38,7 +38,7 @@ Bibi.preset({
 "use-slider"                 : "yes", // "yes" or "no" or "desktop" or "mobile"
 "flip-pages-during-sliding"  : "yes", // "yes" or "no" or "desktop" or "mobile"
 
-"use-nombre"                 : "yes", // "yes" or "no" or "desktop" or "mobile"
+"use-nombre"                 : "no", // "yes" or "no" or "desktop" or "mobile"
 
 "use-font-size-changer"      : "yes", // "yes" or "no" or "desktop" or "mobile"
 "base-font-size"             : "auto", // Number of pixel or "auto"
