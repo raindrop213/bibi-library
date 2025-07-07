@@ -633,6 +633,10 @@ body {
     color: #27ae60;
 }
 
+.modal-action-button.audiobook-button:hover {
+    color: #c562e4;
+}
+
 .modal-action-button.close-button:hover {
     color: #e74c3c;
 }
@@ -871,6 +875,16 @@ body {
     font-size: 1rem;
     color: var(--color-text-2);
     margin-bottom: 25px;
+}
+
+.book-id-display {
+    position: absolute;
+    right: 10px;
+    bottom: 5px;
+    text-align: right;
+    color: #6c757d;
+    font-size: 0.7em;
+    margin-top: 5px;
 }
 
 /* 添加弹窗中链接的样式 */

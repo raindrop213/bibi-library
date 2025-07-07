@@ -466,11 +466,6 @@ app.get('/api/books/:id', (req, res) => {
       WHERE book = ?
     `;
     
-    console.log('执行标签查询:', tagsQuery);
-    console.log('执行出版商查询:', publisherQuery);
-    console.log('执行作者查询:', authorQuery);
-    console.log('执行系列查询:', seriesQuery);
-    console.log('执行标识符查询:', identifiersQuery);
     
     // 并行执行查询
     Promise.all([

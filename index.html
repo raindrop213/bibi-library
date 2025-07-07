@@ -133,6 +133,9 @@
             <div class="modal-header">
                 <div class="modal-title" id="book-modal-title">书籍详情</div>
                 <div class="modal-actions">
+                    <button class="modal-action-button audiobook-button" id="audiobook-button" style="display: none;" title="下载 有声书">
+                        <i class="bi bi-file-earmark-music"></i>
+                    </button>
                     <button class="modal-action-button download-button" id="download-button" title="下载 EPUB">
                         <i class="bi bi-file-earmark-arrow-down"></i>
                     </button>
@@ -201,6 +204,22 @@
         let currentSection = 'books'; // 默认显示书籍页面
         let isLoading = false;
         let hasMoreBooks = true;
+        
+        // 有声书链接字典
+        const audiobookLinks = {
+            '2807': ['カフネ', 'https://mega.nz/folder/K9wzkZTa#Pm_it2hYwbq2IZOOJBBsaw'],
+            '769' : ['きのうの春で、君を待つ', 'https://mega.nz/folder/7pwlnIpC#2WR26i530vQ2epORPYh_-A'],
+            '1042': ['成瀬は天下を取りにいく', 'https://mega.nz/folder/uxRwzJhB#NSQT7dy-AHjWhl2EhbVwMQ'],
+            '2848': ['よるのばけもの', 'https://mega.nz/folder/nhZhWayI#UsXMFMh-LzBjAEZlOaWZ8Q'],
+            '89'  : ['また、同じ夢を見ていた', 'https://mega.nz/folder/7lYhVJqb#nCS5VB1eu3PZlpzj40VM5w'],
+            '37'  : ['西の魔女が死んだ', 'https://mega.nz/folder/6oQE0ZBZ#d8kXnPVir1artZoUqcJ7HQ'],
+            '2805': ['お探し物は図書室まで', 'https://mega.nz/folder/fxRzxJKL#5vX60oPTUzop4hMvYktUjw'],
+            '2804': ['星の王子さま', 'https://mega.nz/folder/OxgUxJhR#n9TryFjazDpaQv8gnh5-lw'],
+            '2500': ['わたしの美しい庭', 'https://mega.nz/folder/joRAkKRY#vBNWnkGYE0rnEogcNOqqHg'],
+            '2644': ['食堂かたつむり', 'https://mega.nz/folder/n8hCgJoQ#vQsFz8mUSKdxXqBR27ew0g'],
+            '2422': ['ライオンのおやつ', 'https://mega.nz/folder/yoJySDDK#yyTgziXkkRcjdhdfcqfD4w'],
+            '2425': ['塀の中の美容室', 'https://mega.nz/folder/boYAHQhL#4d3lGj7dDmtHRzZ-0tN8YQ']
+        };
         
         // 分类加载相关变量
         let categoryPage = 1;
@@ -618,6 +637,7 @@
                     const downloadButton = document.getElementById('download-button');
                     const readButton = document.getElementById('read-button');
                     const favoriteButton = document.getElementById('favorite-button');
+                    const audiobookButton = document.getElementById('audiobook-button');
                     
                     // 检查是否已收藏
                     const isFavorite = favoriteBooks.some(favBook => favBook.id === book.id);
@@ -641,20 +661,34 @@
                     // 设置下载按钮的自定义文件名提示
                     let customFilename = '';
                     if (book.authors && book.authors.length > 0) {
-                        customFilename = `[${book.authors.join('×')}] ${book.title}.epub`;
+                        customFilename = `[${book.authors.join('×')}] ${book.title}`;
                     } else {
-                        customFilename = `${book.title}.epub`;
+                        customFilename = `${book.title}`;
                     }
                     // 替换文件名中的非法字符
                     customFilename = customFilename
                         .replace(/[\/\\:*?"<>|]/g, '_') // 替换Windows和Unix系统中的非法字符
                         .replace(/\s+/g, ' '); // 将多个空格替换为单个空格
                     
-                    downloadButton.title = `下载 ${customFilename}`;
+                    downloadButton.title = `下载 ${customFilename}.epub`;
+                    audiobookButton.title = `下载 ${customFilename}.m4b`;
                     
                     readButton.onclick = function() {
                         window.location.href = `/bibi/?book=${encodeURIComponent(book.path + '/' + book.epub_file)}`;
                     };
+                    
+                    // 处理有声书按钮显示和点击事件
+                    const hasAudiobookTag = book.tags && Array.isArray(book.tags) && book.tags.includes('Audiobook');
+                    const hasAudiobookLink = audiobookLinks[book.id];
+                    
+                    if (hasAudiobookTag && hasAudiobookLink) {
+                        audiobookButton.style.display = 'flex';
+                        audiobookButton.onclick = function() {
+                            window.open(audiobookLinks[book.id][1], '_blank');
+                        };
+                    } else {
+                        audiobookButton.style.display = 'none';
+                    }
                     
                     const container = document.getElementById('book-detail-container');
                     
@@ -733,6 +767,7 @@
                                     <div class="description-content">${book.comment}</div>
                                 </div>
                                 ` : ''}
+                                <div class="book-id-display"># ${book.id}</div>
                             </div>
                         </div>
                     `;
@@ -776,6 +811,9 @@
             document.body.classList.remove('modal-open');
             document.querySelector('.main-content').classList.remove('modal-open');
             document.querySelector('.content').classList.remove('modal-open');
+            
+            // 隐藏有声书按钮
+            document.getElementById('audiobook-button').style.display = 'none';
         }
         
         // 点击弹窗背景关闭弹窗
