@@ -637,33 +637,22 @@
                     favoriteButton.onclick = function() {
                         toggleFavorite(book);
                     };
-                    
+
+                    // 设置下载按钮
+                    downloadButton.title = `${book.title}.epub`;
                     downloadButton.onclick = function() {
                         window.location.href = book.epub_url;
                     };
                     
-                    // 设置下载按钮的自定义文件名提示
-                    let customFilename = '';
-                    if (book.authors && book.authors.length > 0) {
-                        customFilename = `[${book.authors.join('×')}] ${book.title}`;
-                    } else {
-                        customFilename = `${book.title}`;
-                    }
-                    // 替换文件名中的非法字符
-                    customFilename = customFilename
-                        .replace(/[\/\\:*?"<>|]/g, '_') // 替换Windows和Unix系统中的非法字符
-                        .replace(/\s+/g, ' '); // 将多个空格替换为单个空格
-                    
-                    downloadButton.title = `${customFilename}.epub`;
-                    
+                    // 设置阅读按钮
                     readButton.onclick = function() {
                         window.location.href = `/bibi/?book=${encodeURIComponent(book.path + '/' + book.epub_file)}`;
                     };
                     
-                    // 处理有声书按钮显示和点击事件
+                    // 设置有声书按钮
                     if (book.audiobook) {
                         audiobookButton.style.display = 'flex';
-                        audiobookButton.title = `${book.audiobook.title}.m4b`;
+                        audiobookButton.title = `${book.title}.m4b`;
                         audiobookButton.onclick = function() {
                             window.open(book.audiobook.url, '_blank');
                         };
