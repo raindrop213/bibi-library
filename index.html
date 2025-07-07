@@ -189,6 +189,11 @@
         </div>
     </div>
 
+    <!-- 封面大图显示弹窗 -->
+    <div class="fullscreen-cover-overlay" id="fullscreen-cover-overlay">
+        <img src="" alt="Book Cover" class="fullscreen-cover-img" id="fullscreen-cover-img">
+    </div>
+
     <script>
         // 当前页面和排序方式
         let currentPage = 1;
@@ -680,6 +685,9 @@
                             <div class="book-detail-cover">
                                 <div class="cover-container" id="detail-cover-container">
                                     <img src="${book.cover_url || '/images/loading.svg'}" alt="${book.title}" class="detail-cover-img" onload="this.classList.add('loaded')">
+                                    <div class="cover-zoom-btn" title="cover" data-cover="${book.cover_url || '/images/loading.svg'}">
+                                        <i class="bi bi-arrows-fullscreen"></i>
+                                    </div>
                                 </div>
                             </div>
                             <div class="book-detail-info">
@@ -730,9 +738,24 @@
                     `;
                     
                     // 为封面添加点击事件，打开阅读器
-                    document.getElementById('detail-cover-container').addEventListener('click', function() {
+                    document.getElementById('detail-cover-container').addEventListener('click', function(event) {
+                        // 如果点击的是放大按钮，不触发阅读器
+                        if (event.target.closest('.cover-zoom-btn')) {
+                            event.stopPropagation();
+                            return;
+                        }
                         window.location.href = `/bibi/?book=${encodeURIComponent(book.path + '/' + book.epub_file)}`;
                     });
+                    
+                    // 为详情页的封面放大按钮添加事件
+                    const detailZoomBtn = document.querySelector('#detail-cover-container .cover-zoom-btn');
+                    if (detailZoomBtn) {
+                        detailZoomBtn.addEventListener('click', function(event) {
+                            event.stopPropagation(); // 阻止事件冒泡
+                            const coverUrl = this.getAttribute('data-cover');
+                            showFullscreenCover(coverUrl);
+                        });
+                    }
                 })
                 .catch(error => {
                     console.error('加载书籍详情时出错:', error);
@@ -1308,6 +1331,41 @@
             options.headers = addPasswordHeader(options.headers || {});
             return fetch(url, options);
         }
+        
+
+        // 显示全屏封面
+        function showFullscreenCover(coverUrl) {
+            const overlay = document.getElementById('fullscreen-cover-overlay');
+            const img = document.getElementById('fullscreen-cover-img');
+            
+            // 设置图片源（移除缩略图参数）
+            img.src = coverUrl.replace('?size=thumb', '');
+            
+            // 显示遮罩
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden'; // 防止背景滚动
+        }
+        
+        // 关闭全屏封面
+        function closeFullscreenCover() {
+            const overlay = document.getElementById('fullscreen-cover-overlay');
+            overlay.classList.remove('active');
+            document.body.style.overflow = ''; // 恢复背景滚动
+        }
+        
+        // 添加全屏封面点击关闭事件
+        document.getElementById('fullscreen-cover-overlay').addEventListener('click', function() {
+            closeFullscreenCover();
+        });
+        
+        // 添加ESC键关闭全屏封面
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeBookDetail();
+                closeAboutModal();
+                closeFullscreenCover();
+            }
+        });
     </script>
 </body>
 </html>
