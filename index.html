@@ -205,22 +205,6 @@
         let isLoading = false;
         let hasMoreBooks = true;
         
-        // 有声书链接字典
-        const audiobookLinks = {
-            '2807': ['カフネ', 'https://mega.nz/folder/K9wzkZTa#Pm_it2hYwbq2IZOOJBBsaw'],
-            '769' : ['きのうの春で、君を待つ', 'https://mega.nz/folder/7pwlnIpC#2WR26i530vQ2epORPYh_-A'],
-            '1042': ['成瀬は天下を取りにいく', 'https://mega.nz/folder/uxRwzJhB#NSQT7dy-AHjWhl2EhbVwMQ'],
-            '2848': ['よるのばけもの', 'https://mega.nz/folder/nhZhWayI#UsXMFMh-LzBjAEZlOaWZ8Q'],
-            '89'  : ['また、同じ夢を見ていた', 'https://mega.nz/folder/7lYhVJqb#nCS5VB1eu3PZlpzj40VM5w'],
-            '37'  : ['西の魔女が死んだ', 'https://mega.nz/folder/6oQE0ZBZ#d8kXnPVir1artZoUqcJ7HQ'],
-            '2805': ['お探し物は図書室まで', 'https://mega.nz/folder/fxRzxJKL#5vX60oPTUzop4hMvYktUjw'],
-            '2804': ['星の王子さま', 'https://mega.nz/folder/OxgUxJhR#n9TryFjazDpaQv8gnh5-lw'],
-            '2500': ['わたしの美しい庭', 'https://mega.nz/folder/joRAkKRY#vBNWnkGYE0rnEogcNOqqHg'],
-            '2644': ['食堂かたつむり', 'https://mega.nz/folder/n8hCgJoQ#vQsFz8mUSKdxXqBR27ew0g'],
-            '2422': ['ライオンのおやつ', 'https://mega.nz/folder/yoJySDDK#yyTgziXkkRcjdhdfcqfD4w'],
-            '2425': ['塀の中の美容室', 'https://mega.nz/folder/boYAHQhL#4d3lGj7dDmtHRzZ-0tN8YQ']
-        };
-        
         // 分类加载相关变量
         let categoryPage = 1;
         let isLoadingCategories = false;
@@ -670,21 +654,18 @@
                         .replace(/[\/\\:*?"<>|]/g, '_') // 替换Windows和Unix系统中的非法字符
                         .replace(/\s+/g, ' '); // 将多个空格替换为单个空格
                     
-                    downloadButton.title = `下载 ${customFilename}.epub`;
-                    audiobookButton.title = `下载 ${customFilename}.m4b`;
+                    downloadButton.title = `${customFilename}.epub`;
                     
                     readButton.onclick = function() {
                         window.location.href = `/bibi/?book=${encodeURIComponent(book.path + '/' + book.epub_file)}`;
                     };
                     
                     // 处理有声书按钮显示和点击事件
-                    const hasAudiobookTag = book.tags && Array.isArray(book.tags) && book.tags.includes('Audiobook');
-                    const hasAudiobookLink = audiobookLinks[book.id];
-                    
-                    if (hasAudiobookTag && hasAudiobookLink) {
+                    if (book.audiobook) {
                         audiobookButton.style.display = 'flex';
+                        audiobookButton.title = `${book.audiobook.title}.m4b`;
                         audiobookButton.onclick = function() {
-                            window.open(audiobookLinks[book.id][1], '_blank');
+                            window.open(book.audiobook.url, '_blank');
                         };
                     } else {
                         audiobookButton.style.display = 'none';

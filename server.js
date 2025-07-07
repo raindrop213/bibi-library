@@ -90,6 +90,28 @@ function updateBibiConfig() {
 // 执行bibi配置更新
 updateBibiConfig();
 
+// 存储有声书链接的全局变量
+let audiobookLinks = {};
+
+// 加载audiobook.json文件
+function loadAudiobookData() {
+  const audiobookPath = path.join(calibreLibPath, 'audiobook.json');
+  
+  // 检查文件是否存在
+  if (fs.existsSync(audiobookPath)) {
+    try {
+      const data = fs.readFileSync(audiobookPath, 'utf8');
+      audiobookLinks = JSON.parse(data);
+      console.log(`已加载有声书数据: ${Object.keys(audiobookLinks).length}本`);
+    } catch (err) {
+      console.error(`加载有声书数据失败: ${err}`);
+    }
+  } else {
+    console.log(`有声书数据文件不存在: ${audiobookPath}`);
+    audiobookLinks = {};
+  }
+}
+
 // 确保缩略图目录存在
 const thumbDir = path.join(__dirname, '.thumb');
 if (!fs.existsSync(thumbDir)) {
@@ -149,6 +171,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
     dbConnectionError = err.message;
   } else {
     console.log('成功连接到Calibre数据库');
+    // 加载有声书数据
+    loadAudiobookData();
   }
 });
 
@@ -475,7 +499,6 @@ app.get('/api/books/:id', (req, res) => {
             console.error('获取标签时出错:', err);
             reject(err);
           } else {
-            console.log('获取到的标签:', tags);
             resolve(tags);
           }
         });
@@ -483,10 +506,8 @@ app.get('/api/books/:id', (req, res) => {
       new Promise((resolve, reject) => {
         db.get(publisherQuery, [bookId], (err, publisher) => {
           if (err) {
-            console.error('获取出版商时出错:', err);
             reject(err);
           } else {
-            console.log('获取到的出版商:', publisher);
             resolve(publisher);
           }
         });
@@ -497,7 +518,6 @@ app.get('/api/books/:id', (req, res) => {
             console.error('获取作者时出错:', err);
             reject(err);
           } else {
-            console.log('获取到的作者:', authors);
             resolve(authors);
           }
         });
@@ -508,7 +528,6 @@ app.get('/api/books/:id', (req, res) => {
             console.error('获取系列时出错:', err);
             reject(err);
           } else {
-            console.log('获取到的系列:', series);
             resolve(series);
           }
         });
@@ -519,7 +538,6 @@ app.get('/api/books/:id', (req, res) => {
             console.error('获取标识符时出错:', err);
             reject(err);
           } else {
-            console.log('获取到的标识符:', identifiers);
             resolve(identifiers);
           }
         });
@@ -568,7 +586,11 @@ app.get('/api/books/:id', (req, res) => {
           series: series ? series.series_name : null,
           identifiers: identifiersObj,
           epub_url: `/api/books/${book.id}/epub`,
-          epub_file: epubFile || null
+          epub_file: epubFile || null,
+          audiobook: audiobookLinks && audiobookLinks[book.id] ? {
+            title: audiobookLinks[book.id][0],
+            url: audiobookLinks[book.id][1]
+          } : null
         };
         
         res.json(bookInfo);
