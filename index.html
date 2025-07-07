@@ -560,7 +560,7 @@
         function formatTagLinks(tags) {
             if (!tags || tags.length === 0) return '无';
             return tags.map(tag => 
-                `<span class="tag" onclick="window.location.href='/categories/${encodeURIComponent(tag)}'">
+                `<span class="tag" data-tag="${tag}" onclick="window.location.href='/categories/${encodeURIComponent(tag)}'">
                     ${tag}
                 </span>`
             ).join(' ');
@@ -943,6 +943,7 @@
                             `;
                         } else {
                             categoryElement.className = 'category-item';
+                            categoryElement.setAttribute('data-category', item.name);
                             // 其他分类的普通显示
                             categoryElement.innerHTML = `
                                 <div class="category-name">${item.name}</div>
