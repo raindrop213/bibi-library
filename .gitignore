@@ -2,6 +2,7 @@ Calibre/*
 CalibreLib/*
 .thumb/*
 CalibreLib2/*
+config.js
 
 # Logs
 logs
