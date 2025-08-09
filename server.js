@@ -85,7 +85,7 @@ function updateBibiConfig() {
     if (calibreLibPath.startsWith('./')) {
       calibreLibPath = calibreLibPath.substring(2); // 移除开头的'./'
     }
-    const relativePath = `${calibreLibPath}`;
+    const relativePath = `../../${calibreLibPath}`;
     
     // 使用正则表达式替换bookshelf配置
     const updatedData = data.replace(
