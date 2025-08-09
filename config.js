@@ -2,7 +2,7 @@
 module.exports = {
 
   // Calibre书库路径（相对于项目根目录）
-  calibreLibPath: './CalibreLib2',
+  calibreLibPath: '../CalibreLib',
   
   // 服务器端口
   port: 4545,
