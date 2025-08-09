@@ -7,7 +7,24 @@ const sharp = require('sharp');
 const schedule = require('node-schedule');
 const app = express();
 
-const config = require('./config');
+const configPath = path.join(__dirname, 'config.js');
+const exampleConfigPath = path.join(__dirname, 'config.example.js');
+let config;
+if (!fs.existsSync(configPath)) {
+  console.error('未找到配置文件 config.js。');
+  if (fs.existsSync(exampleConfigPath)) {
+    console.error('请将 config.example.js 复制为 config.js 并修改书库路径。');
+  } else {
+    console.error('示例配置文件 config.example.js 也不存在，请检查项目结构。');
+  }
+  process.exit(1);
+}
+try {
+  config = require('./config');
+} catch (e) {
+  console.error('加载配置文件失败:', e.message);
+  process.exit(1);
+}
 const PORT = config.port || 4545;
 
 // 从配置中获取标签过滤设置

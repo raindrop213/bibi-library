@@ -1,7 +1,7 @@
-// 配置文件
+// 配置文件示例（请复制为 config.js 并根据你的环境修改）
 module.exports = {
 
-  // Calibre书库路径（相对于项目根目录）
+  // Calibre书库路径（相对于项目根目录或绝对路径）
   calibreLibPath: 'path/to/CalibreLib',
   
   // 服务器端口
@@ -33,4 +33,4 @@ module.exports = {
     // 丛书列表每页显示数量
     seriesPageSize: 20
   }
-};
+}; 
