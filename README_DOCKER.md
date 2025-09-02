@@ -10,7 +10,7 @@
 ### 2. 配置GitHub Secrets
 在GitHub仓库的 `Settings > Secrets and variables > Actions` 中添加：
 - `DOCKER_USERNAME`: 你的Docker Hub用户名
-- `DOCKER_PASSWORD`: Docker Hub访问令牌
+- `DOCKER_TOKEN`: Docker Hub访问令牌
 
 ### 3. 自动发布
 - 推送到 `main` 或 `master` 分支会自动构建并发布 `latest` 标签
