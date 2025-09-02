@@ -23,10 +23,10 @@ module.exports = {
   // 缩略图清理设置
   thumbnails: {
     // 清理间隔（天）
-    cleanInterval: 7,
+    cleanInterval: 60,
     
     // 清理时间（24小时制，格式：小时:分钟）
-    cleanTime: '03:00'
+    cleanTime: '04:00'
   },
 
   // 分页设置

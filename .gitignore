@@ -1,8 +1,5 @@
-Calibre/*
-CalibreLib/*
+books/*
 .thumb/*
-CalibreLib2/*
-config.js
 
 # Logs
 logs
