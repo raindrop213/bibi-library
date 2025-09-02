@@ -1,20 +1,22 @@
-// 配置文件示例（请复制为 config.js 并根据你的环境修改）
-module.exports = {
+// 默认配置文件
+// 简化配置，固定基本参数
 
-  // Calibre书库路径（相对于项目根目录或绝对路径）
-  calibreLibPath: 'path/to/CalibreLib',
+module.exports = {
+  // Calibre书库路径 - 固定为 ./books
+  calibreLibPath: './books',
   
-  // 服务器端口
+  // 服务器端口 - 固定为 4545
   port: 4545,
 
-  // 是否启用CORS
+  // 启用CORS
   enableCors: true,
   
   // 标签过滤设置
   tagFilter: {
     // 需要过滤的标签列表
     excludedTags: ['ECHI'],
-    // 访问密码（设置为null表示不需要密码）
+    
+    // 访问密码
     accessPassword: 'nsfw'
   },
   
@@ -22,6 +24,7 @@ module.exports = {
   thumbnails: {
     // 清理间隔（天）
     cleanInterval: 7,
+    
     // 清理时间（24小时制，格式：小时:分钟）
     cleanTime: '03:00'
   },
@@ -30,6 +33,7 @@ module.exports = {
   pagination: {
     // 每页显示数量
     pageSize: 20,
+    
     // 丛书列表每页显示数量
     seriesPageSize: 20
   }

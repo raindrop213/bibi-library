@@ -1,9 +1,36 @@
 {
+  "name": "bibi-library",
+  "version": "1.0.0",
+  "description": "Calibre书库 + bibi阅读器的Web应用",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "docker:build": "docker build -t bibi-library .",
+    "docker:run": "docker run -d --name bibi-library -p 4545:4545 -v ./books:/books:ro bibi-library",
+    "docker:compose": "docker-compose up -d"
+  },
+  "keywords": [
+    "calibre",
+    "bibi",
+    "epub",
+    "library",
+    "reader"
+  ],
+  "author": "raindrop213",
+  "license": "MIT",
   "dependencies": {
-    "cors": "^2.8.5",
     "express": "^4.21.2",
-    "node-schedule": "^2.1.1",
+    "sqlite3": "^5.1.7",
+    "cors": "^2.8.5",
     "sharp": "^0.33.5",
-    "sqlite3": "^5.1.7"
+    "node-schedule": "^2.1.1"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/raindrop213/bibi-library.git"
   }
 }
