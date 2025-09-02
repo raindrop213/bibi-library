@@ -689,7 +689,7 @@
                         <div class="book-detail-layout">
                             <div class="book-detail-cover">
                                 <div class="cover-container" id="detail-cover-container">
-                                    <img src="${book.cover_url || '/images/loading.svg'}" alt="${book.title}" class="detail-cover-img" onload="this.classList.add('loaded')">
+                                    <img src="${book.cover_url ? book.cover_url + '?size=thumb' : '/images/loading.svg'}" alt="${book.title}" class="detail-cover-img" onload="this.classList.add('loaded')">
                                     <div class="cover-zoom-btn" title="cover" data-cover="${book.cover_url || '/images/loading.svg'}">
                                         <i class="bi bi-arrows-fullscreen"></i>
                                     </div>

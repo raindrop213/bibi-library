@@ -653,8 +653,8 @@ app.get('/api/books/:id/cover', (req, res) => {
         
         // 缩略图不存在，生成缩略图
         sharp(coverPath)
-          .resize(210, 296) // 按照书籍封面比例 105:148 的两倍大小
-          .jpeg({ quality: 80 }) // 设置JPEG质量为80%
+          .resize(315, 444) // 按照书籍封面比例 105:148 的3倍大小
+          .jpeg({ quality: 85 }) // 设置JPEG质量为85%
           .toFile(thumbPath)
           .then(() => {
             // 发送生成的缩略图
