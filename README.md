@@ -16,20 +16,23 @@
 
 1. 准备Calibre书库目录
 
-2. 启动服务：
-   ```bash
-   # 使用 docker-compose
-   docker-compose up -d
-   
-   # 或直接使用Docker命令
-   docker run -d \
-     --name bibi-library \
-     -p 4545:4545 \
-     -v /path/to/books:/app/books:ro \
-     rd213/bibi-library:latest
-   ```
+2. 启动服务 [- Docker Hub -](https://hub.docker.com/repository/docker/rd213/bibi-library/general)：
 
-3. 访问应用：http://localhost:4545
+
+   - 使用 [docker-compose](./docker-compose.yml) 部署
+      ```bash
+      docker-compose up -d
+      ```
+
+   - 或者直接使用Docker命令部署（例如：/path/to/CalibreLib/metadata.db）
+      ```bash
+      docker run -d \
+      --name bibi-library \
+      -p 4545:4545 \
+      -v /path/to/CalibreLib:/app/books:ro \
+      rd213/bibi-library:latest
+      ```
+
 
 ### 本地运行
 
@@ -40,7 +43,7 @@
    npm install
    ```
 
-2. 将Calibre书库复制到 `./books` 目录
+2. 将Calibre书库复制到 `./books` 目录，使 metadata.db 在 `./books` 目录下
 
 3. 启动服务器：
    ```bash
