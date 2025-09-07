@@ -18,6 +18,10 @@ services:
     environment:
       - ACCESS_PASSWORD=your_password
       - EXCLUDED_TAGS=ECHI,ADULT
+      - PAGE_SIZE=20
+      - SERIES_PAGE_SIZE=20
+      - THUMBNAIL_CLEAN_INTERVAL=60
+      - THUMBNAIL_CLEAN_TIME=04:00
     restart: unless-stopped
 ```
 
@@ -33,6 +37,10 @@ docker run -d \
   -v /path/to/books:/app/books:ro \
   -e ACCESS_PASSWORD=your_password \
   -e EXCLUDED_TAGS=ECHI,ADULT \
+  -e PAGE_SIZE=20 \
+  -e SERIES_PAGE_SIZE=20 \
+  -e THUMBNAIL_CLEAN_INTERVAL=60 \
+  -e THUMBNAIL_CLEAN_TIME=04:00 \
   rd213/bibi-library:latest
 ```
 
@@ -43,6 +51,10 @@ docker run -d \
 ## 🔧 环境变量
 - `ACCESS_PASSWORD`: 访问密码（默认：nsfw）
 - `EXCLUDED_TAGS`: 排除的标签，逗号分隔（默认：ECHI,ADULT）
+- `PAGE_SIZE`: 每页显示数量（默认：20）
+- `SERIES_PAGE_SIZE`: 丛书列表每页显示数量（默认：20）
+- `THUMBNAIL_CLEAN_INTERVAL`: 缩略图清理间隔天数（默认：60）
+- `THUMBNAIL_CLEAN_TIME`: 缩略图清理时间，格式HH:MM（默认：04:00）
 
 ## 📁 挂载目录
 - `/app/books`: 书籍目录（只读）

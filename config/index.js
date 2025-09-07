@@ -19,6 +19,31 @@ function loadConfig() {
     }
   }
   
+  // 从环境变量覆盖配置
+  if (process.env.ACCESS_PASSWORD) {
+    config.tagFilter.accessPassword = process.env.ACCESS_PASSWORD;
+  }
+  
+  if (process.env.EXCLUDED_TAGS) {
+    config.tagFilter.excludedTags = process.env.EXCLUDED_TAGS.split(',').map(tag => tag.trim());
+  }
+  
+  if (process.env.PAGE_SIZE) {
+    config.pagination.pageSize = parseInt(process.env.PAGE_SIZE);
+  }
+  
+  if (process.env.SERIES_PAGE_SIZE) {
+    config.pagination.seriesPageSize = parseInt(process.env.SERIES_PAGE_SIZE);
+  }
+  
+  if (process.env.THUMBNAIL_CLEAN_INTERVAL) {
+    config.thumbnails.cleanInterval = parseInt(process.env.THUMBNAIL_CLEAN_INTERVAL);
+  }
+  
+  if (process.env.THUMBNAIL_CLEAN_TIME) {
+    config.thumbnails.cleanTime = process.env.THUMBNAIL_CLEAN_TIME;
+  }
+  
   // 验证配置
   validateConfig(config);
   
