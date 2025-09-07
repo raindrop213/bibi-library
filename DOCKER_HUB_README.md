@@ -1,11 +1,6 @@
-# Docker 发布说明
+# bibi-library
 
-## 📦 镜像信息
-- **名称**: `rd213/bibi-library`
-- **描述**: Calibre书库 + bibi阅读器的Web应用，支持EPUB电子书在线阅读
-- **端口**: 4545
-- **基础镜像**: `node:22-alpine`
-- **大小**: ~184MB
+Calibre书库 + bibi阅读器的Web应用，支持EPUB电子书在线阅读。
 
 ## 🚀 快速开始
 
@@ -52,20 +47,15 @@ docker run -d \
 ## 📁 挂载目录
 - `/app/books`: 书籍目录（只读）
 
-## 🔍 查看镜像
-https://hub.docker.com/r/rd213/bibi-library
+## 📋 技术规格
+- **基础镜像**: `node:22-alpine`
+- **端口**: 4545
+- **大小**: ~184MB
+- **架构**: linux/amd64
 
-## 🚀 自动发布
+## 🔗 相关链接
+- [GitHub仓库](https://github.com/raindrop213/bibi-library)
+- [项目文档](https://github.com/raindrop213/bibi-library/blob/main/README.md)
 
-### 配置GitHub Secrets
-在GitHub仓库的 `Settings > Secrets and variables > Actions` 中添加：
-- `DOCKER_USERNAME`: 你的Docker Hub用户名
-- `DOCKER_TOKEN`: Docker Hub访问令牌
-
-### 发布流程
-- 推送到 `main` 或 `master` 分支 → 自动发布 `latest` 标签
-- 创建版本标签（如 `v1.0.0`）→ 自动发布对应版本
-
-### 版本号设置
-版本号在 `package.json` 中的 `version` 字段设置，当前版本：`1.0.0`
-
+## 📄 许可证
+MIT License
