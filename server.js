@@ -16,8 +16,8 @@ const PORT = config.port;
 printConfig(config);
 
 // 从配置中获取标签过滤设置
-const EXCLUDED_TAGS = config.tagFilter?.excludedTags || ['ECHI'];
-const ACCESS_PASSWORD = config.tagFilter?.accessPassword || 'rd2b';
+const EXCLUDED_TAGS = config.tagFilter?.excludedTags;
+const ACCESS_PASSWORD = config.tagFilter?.accessPassword;
 
 // 构建标签过滤条件
 function buildTagFilterCondition(hasAccess) {
@@ -57,43 +57,7 @@ function validatePassword(req, res, next) {
 // 在所有API路由之前添加密码验证中间件
 app.use('/api', validatePassword);
 
-// 更新bibi配置函数
-function updateBibiConfig() {
-  const bibiConfigPath = path.join(__dirname, 'bibi', 'presets', 'default.js');
-  
-  // 读取bibi配置文件
-  fs.readFile(bibiConfigPath, 'utf8', (err, data) => {
-    if (err) {
-      console.error(`无法读取bibi配置文件: ${err}`);
-      return;
-    }
-    
-    // 获取相对路径（从bibi/presets到书库目录）
-    let calibreLibPath = config.calibreLibPath;
-    if (calibreLibPath.startsWith('./')) {
-      calibreLibPath = calibreLibPath.substring(2); // 移除开头的'./'
-    }
-    const relativePath = `../../${calibreLibPath}`;
-    
-    // 使用正则表达式替换bookshelf配置
-    const updatedData = data.replace(
-      /(["']bookshelf["']\s*:\s*["'])([^"']+)(["'])/,
-      `$1${relativePath}$3`
-    );
-    
-    // 写入更新后的配置
-    fs.writeFile(bibiConfigPath, updatedData, 'utf8', (err) => {
-      if (err) {
-        console.error(`无法更新bibi配置文件: ${err}`);
-        return;
-      }
-      console.log(`已更新bibi阅读器配置:"bookshelf" : "${relativePath}" `);
-    });
-  });
-}
-
-// 执行bibi配置更新
-updateBibiConfig();
+// 书库路径已固定在 ./books，无需动态更新bibi配置
 
 // 存储有声书链接的全局变量
 let audiobookLinks = {};

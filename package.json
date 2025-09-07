@@ -1,6 +1,6 @@
 {
   "name": "bibi-library",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Calibre书库 + bibi阅读器的Web应用",
   "main": "server.js",
   "scripts": {

@@ -20,10 +20,10 @@ RUN npm install --omit=dev
 # 复制应用代码
 COPY . .
 
-# 创建缩略图目录
-RUN mkdir -p .thumb
+# 创建缩略图目录和书库目录
+RUN mkdir -p .thumb books
 
-# 暴露端口
+# 暴露端口（固定为4545）
 EXPOSE 4545
 
 # 启动应用

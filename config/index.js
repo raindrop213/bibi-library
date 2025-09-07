@@ -19,30 +19,39 @@ function loadConfig() {
     }
   }
   
-  // 从环境变量覆盖配置
-  if (process.env.ACCESS_PASSWORD) {
-    config.tagFilter.accessPassword = process.env.ACCESS_PASSWORD;
-  }
+  // 从环境变量覆盖配置（除了端口号和书库路径）
+  const envMappings = {
+    'ACCESS_PASSWORD': 'tagFilter.accessPassword',
+    'EXCLUDED_TAGS': 'tagFilter.excludedTags',
+    'PAGE_SIZE': 'pagination.pageSize',
+    'SERIES_PAGE_SIZE': 'pagination.seriesPageSize',
+    'THUMBNAIL_CLEAN_INTERVAL': 'thumbnails.cleanInterval',
+    'THUMBNAIL_CLEAN_TIME': 'thumbnails.cleanTime'
+  };
   
-  if (process.env.EXCLUDED_TAGS) {
-    config.tagFilter.excludedTags = process.env.EXCLUDED_TAGS.split(',').map(tag => tag.trim());
-  }
-  
-  if (process.env.PAGE_SIZE) {
-    config.pagination.pageSize = parseInt(process.env.PAGE_SIZE);
-  }
-  
-  if (process.env.SERIES_PAGE_SIZE) {
-    config.pagination.seriesPageSize = parseInt(process.env.SERIES_PAGE_SIZE);
-  }
-  
-  if (process.env.THUMBNAIL_CLEAN_INTERVAL) {
-    config.thumbnails.cleanInterval = parseInt(process.env.THUMBNAIL_CLEAN_INTERVAL);
-  }
-  
-  if (process.env.THUMBNAIL_CLEAN_TIME) {
-    config.thumbnails.cleanTime = process.env.THUMBNAIL_CLEAN_TIME;
-  }
+  Object.entries(envMappings).forEach(([envKey, configPath]) => {
+    if (process.env[envKey]) {
+      const value = process.env[envKey];
+      const keys = configPath.split('.');
+      let target = config;
+      
+      // 导航到目标对象
+      for (let i = 0; i < keys.length - 1; i++) {
+        if (!target[keys[i]]) target[keys[i]] = {};
+        target = target[keys[i]];
+      }
+      
+      // 设置值，处理特殊类型
+      const finalKey = keys[keys.length - 1];
+      if (envKey === 'EXCLUDED_TAGS') {
+        target[finalKey] = value.split(',').map(tag => tag.trim());
+      } else if (['PAGE_SIZE', 'SERIES_PAGE_SIZE', 'THUMBNAIL_CLEAN_INTERVAL'].includes(envKey)) {
+        target[finalKey] = parseInt(value);
+      } else {
+        target[finalKey] = value;
+      }
+    }
+  });
   
   // 验证配置
   validateConfig(config);

@@ -16,10 +16,10 @@ services:
     volumes:
       - /path/to/books:/app/books:ro
     environment:
-      - ACCESS_PASSWORD=your_password
+      - ACCESS_PASSWORD=password
       - EXCLUDED_TAGS=ECHI,ADULT
-      - PAGE_SIZE=20
-      - SERIES_PAGE_SIZE=20
+      - PAGE_SIZE=30
+      - SERIES_PAGE_SIZE=30
       - THUMBNAIL_CLEAN_INTERVAL=60
       - THUMBNAIL_CLEAN_TIME=04:00
     restart: unless-stopped
@@ -35,10 +35,10 @@ docker run -d \
   --name bibi-library \
   -p 4545:4545 \
   -v /path/to/books:/app/books:ro \
-  -e ACCESS_PASSWORD=your_password \
+  -e ACCESS_PASSWORD=password \
   -e EXCLUDED_TAGS=ECHI,ADULT \
-  -e PAGE_SIZE=20 \
-  -e SERIES_PAGE_SIZE=20 \
+  -e PAGE_SIZE=30 \
+  -e SERIES_PAGE_SIZE=30 \
   -e THUMBNAIL_CLEAN_INTERVAL=60 \
   -e THUMBNAIL_CLEAN_TIME=04:00 \
   rd213/bibi-library:latest
@@ -46,24 +46,17 @@ docker run -d \
 
 ## 🏷️ 版本标签
 - `latest`: 最新稳定版本（主分支）
-- `v1.0.0`: 语义化版本标签
 
 ## 🔧 环境变量
-- `ACCESS_PASSWORD`: 访问密码（默认：nsfw）
+- `ACCESS_PASSWORD`: 访问密码（默认：password）
 - `EXCLUDED_TAGS`: 排除的标签，逗号分隔（默认：ECHI,ADULT）
-- `PAGE_SIZE`: 每页显示数量（默认：20）
-- `SERIES_PAGE_SIZE`: 丛书列表每页显示数量（默认：20）
+- `PAGE_SIZE`: 每页显示数量（默认：30）
+- `SERIES_PAGE_SIZE`: 丛书列表每页显示数量（默认：30）
 - `THUMBNAIL_CLEAN_INTERVAL`: 缩略图清理间隔天数（默认：60）
 - `THUMBNAIL_CLEAN_TIME`: 缩略图清理时间，格式HH:MM（默认：04:00）
 
 ## 📁 挂载目录
-- `/app/books`: 书籍目录（只读）
-
-## 📋 技术规格
-- **基础镜像**: `node:22-alpine`
-- **端口**: 4545
-- **大小**: ~184MB
-- **架构**: linux/amd64
+- `/app/books`: 书籍目录
 
 ## 🔗 相关链接
 - [GitHub仓库](https://github.com/raindrop213/bibi-library)

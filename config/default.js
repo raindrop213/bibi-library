@@ -14,10 +14,10 @@ module.exports = {
   // 标签过滤设置
   tagFilter: {
     // 需要过滤的标签列表
-    excludedTags: ['ECHI'],
+    excludedTags: ['ECHI','ADULT'],
     
     // 访问密码
-    accessPassword: 'nsfw'
+    accessPassword: 'password'
   },
   
   // 缩略图清理设置
@@ -32,9 +32,9 @@ module.exports = {
   // 分页设置
   pagination: {
     // 每页显示数量
-    pageSize: 20,
+    pageSize: 30,
     
     // 丛书列表每页显示数量
-    seriesPageSize: 20
+    seriesPageSize: 30
   }
 }; 
