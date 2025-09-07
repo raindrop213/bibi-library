@@ -2,7 +2,7 @@
 // 简化配置，固定基本参数
 
 module.exports = {
-  // Calibre书库路径 - 固定为 ./books
+  // Calibre书库路径 - 与 bibi\presets\default.js 中的路径同步
   calibreLibPath: './books',
   
   // 服务器端口 - 固定为 4545

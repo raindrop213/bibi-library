@@ -50,14 +50,5 @@
    node server.js
    ```
 
-
-## 配置
-
-### 环境变量
-- `ACCESS_PASSWORD`: 访问密码（默认：password）
-- `EXCLUDED_TAGS`: 排除的标签，逗号分隔（默认：ECHI,ADULT）
-- `GOOGLE_ANALYTICS_ID`: Google Analytics跟踪ID（可选）
-
-
 ## 许可证
 MIT License
