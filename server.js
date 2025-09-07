@@ -1151,6 +1151,20 @@ function generateHTML() {
   const indexPath = path.join(__dirname, 'index.html');
   let htmlContent = fs.readFileSync(indexPath, 'utf8');
   
+  // 注入应用版本：优先使用环境变量 APP_VERSION，其次读取 package.json 的 version
+  let appVersion = process.env.APP_VERSION;
+  if (!appVersion) {
+    try {
+      const pkg = require('./package.json');
+      appVersion = pkg && pkg.version ? pkg.version : '';
+    } catch (e) {
+      appVersion = '';
+    }
+  }
+  if (appVersion) {
+    htmlContent = htmlContent.replace(/__APP_VERSION__/g, appVersion);
+  }
+  
   // 如果配置了Google Analytics ID，则替换硬编码的ID
   if (config.googleAnalytics?.trackingId) {
     const gaId = config.googleAnalytics.trackingId;
