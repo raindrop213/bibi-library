@@ -7,17 +7,6 @@ const defaultConfig = require('./default');
 function loadConfig() {
   let config = { ...defaultConfig };
   
-  // 尝试加载自定义配置文件（如果存在）
-  const customConfigPath = path.join(process.cwd(), 'config.js');
-  if (fs.existsSync(customConfigPath)) {
-    try {
-      const customConfig = require(customConfigPath);
-      config = { ...config, ...customConfig };
-      console.log('已加载自定义配置文件:', customConfigPath);
-    } catch (err) {
-      console.warn('加载自定义配置文件失败:', err.message);
-    }
-  }
   
   // 从环境变量覆盖配置（除了端口号和书库路径）
   const envMappings = {
@@ -26,7 +15,8 @@ function loadConfig() {
     'PAGE_SIZE': 'pagination.pageSize',
     'SERIES_PAGE_SIZE': 'pagination.seriesPageSize',
     'THUMBNAIL_CLEAN_INTERVAL': 'thumbnails.cleanInterval',
-    'THUMBNAIL_CLEAN_TIME': 'thumbnails.cleanTime'
+    'THUMBNAIL_CLEAN_TIME': 'thumbnails.cleanTime',
+    'GOOGLE_ANALYTICS_ID': 'googleAnalytics.trackingId'
   };
   
   Object.entries(envMappings).forEach(([envKey, configPath]) => {
@@ -114,6 +104,7 @@ function printConfig(config) {
   console.log(`缩略图清理: 每${config.thumbnails.cleanInterval}天 ${config.thumbnails.cleanTime}`);
   console.log(`分页大小: ${config.pagination.pageSize}`);
   console.log(`丛书分页大小: ${config.pagination.seriesPageSize}`);
+  console.log(`Google Analytics: ${config.googleAnalytics.trackingId || '未配置'}`);
   console.log('================');
 }
 

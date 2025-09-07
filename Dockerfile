@@ -26,5 +26,8 @@ RUN mkdir -p .thumb books
 # 暴露端口（固定为4545）
 EXPOSE 4545
 
+# 设置环境变量（可选）
+ENV GOOGLE_ANALYTICS_ID=""
+
 # 启动应用
 CMD ["node", "server.js"]

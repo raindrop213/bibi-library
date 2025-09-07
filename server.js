@@ -1145,9 +1145,28 @@ const thumbnailCleanJob = schedule.scheduleJob(cleanScheduleRule, function() {
 
 console.log(`已设置每${thumbnailCleanInterval}天${cleanHour}:${cleanMinute.toString().padStart(2, '0')}自动清理缩略图的定时任务`);
 
+// 生成包含Google Analytics的HTML内容
+function generateHTML() {
+  const fs = require('fs');
+  const indexPath = path.join(__dirname, 'index.html');
+  let htmlContent = fs.readFileSync(indexPath, 'utf8');
+  
+  // 如果配置了Google Analytics ID，则替换硬编码的ID
+  if (config.googleAnalytics?.trackingId) {
+    const gaId = config.googleAnalytics.trackingId;
+    htmlContent = htmlContent.replace(/G-0B29XWKYNY/g, gaId);
+  } else {
+    // 如果没有配置Google Analytics ID，则移除GA代码
+    htmlContent = htmlContent.replace(/<!-- Google tag \(gtag\.js\) -->[\s\S]*?<\/script>\s*<\/head>/m, '</head>');
+  }
+  
+  return htmlContent;
+}
+
 // 处理SPA路由
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  const htmlContent = generateHTML();
+  res.send(htmlContent);
 });
 
 // 启动服务器

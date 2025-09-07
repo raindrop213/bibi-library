@@ -22,6 +22,7 @@ services:
       - SERIES_PAGE_SIZE=30
       - THUMBNAIL_CLEAN_INTERVAL=60
       - THUMBNAIL_CLEAN_TIME=04:00
+      - GOOGLE_ANALYTICS_ID=null  # 可选：设置Google Analytics ID
     restart: unless-stopped
 ```
 
@@ -41,6 +42,7 @@ docker run -d \
   -e SERIES_PAGE_SIZE=30 \
   -e THUMBNAIL_CLEAN_INTERVAL=60 \
   -e THUMBNAIL_CLEAN_TIME=04:00 \
+  -e GOOGLE_ANALYTICS_ID=null \
   rd213/bibi-library:latest
 ```
 
@@ -54,6 +56,7 @@ docker run -d \
 - `SERIES_PAGE_SIZE`: 丛书列表每页显示数量（默认：30）
 - `THUMBNAIL_CLEAN_INTERVAL`: 缩略图清理间隔天数（默认：60）
 - `THUMBNAIL_CLEAN_TIME`: 缩略图清理时间，格式HH:MM（默认：04:00）
+- `GOOGLE_ANALYTICS_ID`: Google Analytics跟踪ID（可选，格式：G-XXXXXXXXXX）
 
 ## 📁 挂载目录
 - `/app/books`: 书籍目录

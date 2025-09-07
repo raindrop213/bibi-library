@@ -1,64 +1,60 @@
-# Calibre书库 + bibi阅读器
+# bibi-library
 
-这是一个基于Node.js的web书库。
-1. 推送[Calibre](https://github.com/kovidgoyal/calibre)数据库中的书籍。
-2. [bibi](https://github.com/satorumurmur/bibi)作为阅读器。
+基于Node.js的Calibre书库Web应用，集成bibi阅读器，支持EPUB电子书在线阅读。
 
-因为支持Calibre书籍库的[Calibre-web](https://github.com/janeczku/calibre-web)无法处理复杂的epub排版，而且在移动端是灾难级的表现。所以制作了这个简单的书架项目。
+## 特性
+- 📚 支持Calibre书库管理
+- 📖 集成bibi阅读器（专为竖版日语书优化）
+- 🏷️ 标签过滤和分类
+- 📱 移动端友好
+- 🐳 Docker容器化支持
+- 📊 可配置Google Analytics
 
-## 优势
-- bibi阅读器有对竖版日语书做专门优化
-- Calibre是最好用的书籍管理工具！
-- 支持Docker部署，便于容器化管理
+## 快速开始
 
-## 安装和使用
+### Docker部署（推荐）
 
-### 前提条件
-- Node.js 或 Docker
-- Calibre书籍库
-
-### 方式一：直接运行
-
-1. 克隆或下载本仓库
-   ```bash
-   git clone https://github.com/raindrop213/bibi-library.git
-   cd bibi-library
-   ```
-
-2. 安装依赖：
-   ```bash
-   npm install
-   ```
-
-3. 配置书库路径：
-   - 可以复制或者软链接Calibre书库到 `./books` 目录，
-
-4. 启动服务器：
-   ```bash
-   node server.js
-   ```
-
-### 方式二：Docker部署（推荐）
-
-1. 准备书库目录：
+1. 准备Calibre书库目录
 
 2. 启动服务：
    ```bash
-   # 使用 docker-compose（推荐）
+   # 使用 docker-compose
    docker-compose up -d
    
-   # 或使用 npm 脚本
-   npm run docker:build
-   npm run docker:run
+   # 或直接使用Docker命令
+   docker run -d \
+     --name bibi-library \
+     -p 4545:4545 \
+     -v /path/to/books:/app/books:ro \
+     rd213/bibi-library:latest
    ```
 
 3. 访问应用：http://localhost:4545
 
+### 本地运行
 
-## 功能特性
+1. 克隆仓库并安装依赖：
+   ```bash
+   git clone https://github.com/raindrop213/bibi-library.git
+   cd bibi-library
+   npm install
+   ```
 
-- 📚 支持Calibre书库管理
-- 📖 集成bibi阅读器
-- 🏷️ 标签过滤和分类
-- 📱 移动端友好
-- 🐳 Docker容器化支持
+2. 将Calibre书库复制到 `./books` 目录
+
+3. 启动服务器：
+   ```bash
+   node server.js
+   ```
+
+
+## 配置
+
+### 环境变量
+- `ACCESS_PASSWORD`: 访问密码（默认：password）
+- `EXCLUDED_TAGS`: 排除的标签，逗号分隔（默认：ECHI,ADULT）
+- `GOOGLE_ANALYTICS_ID`: Google Analytics跟踪ID（可选）
+
+
+## 许可证
+MIT License

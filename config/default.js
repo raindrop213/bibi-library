@@ -36,5 +36,11 @@ module.exports = {
     
     // 丛书列表每页显示数量
     seriesPageSize: 30
+  },
+
+  // Google Analytics设置
+  googleAnalytics: {
+    // Google Analytics ID，如果为空则不插入GA代码
+    trackingId: null
   }
 }; 
